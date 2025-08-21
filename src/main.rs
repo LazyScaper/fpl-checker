@@ -37,6 +37,13 @@ const PLAYER_AND_TEAM_IDS: [FplTeamInfo; 8] = [
 ];
 
 #[derive(Debug, PartialEq, Clone, Default)]
+
+struct ValidationResult {
+    is_valid: bool,
+    reason: String,
+}
+
+#[derive(Debug, PartialEq, Clone, Default)]
 struct Player {
     id: i64,
     name: String,
@@ -56,7 +63,6 @@ struct FplTeamInfo {
     player_name: &'static str,
     team_id: u32,
 }
-// }
 
 //
 // fn fetch_picked_players(team: &FplTeamInfo) -> Value {
@@ -203,6 +209,32 @@ fn build_team(
     }
 }
 
+fn team_contains_at_most_one_player_per_club(team: Team) -> ValidationResult {
+    let mut seen_players_by_club_id: HashMap<i64, Player> = HashMap::new();
+
+    for player in team.players {
+        if seen_players_by_club_id.contains_key(&player.club_id) {
+            return ValidationResult {
+                is_valid: false,
+                reason: format!(
+                    "{} has shat the bed. {} contains more than 1 player from {} ({} and {})",
+                    &team.owner,
+                    &team.team_name,
+                    &player.club,
+                    seen_players_by_club_id.get(&player.club_id).unwrap().name,
+                    player.name
+                ),
+            };
+        }
+
+        seen_players_by_club_id.insert(player.club_id, player);
+    }
+
+    ValidationResult {
+        is_valid: true,
+        reason: "".to_string(),
+    }
+}
 fn main() {}
 
 mod tests {
@@ -216,10 +248,10 @@ mod tests {
     fn should_build_teams_by_team_id_from_bootstrap_data() {
         let actual = build_teams_by_team_id(BOOTSTRAP_JSON);
 
-        assert_eq!(actual.get(&1), Some(&"Arsenal".to_string()));
-        assert_eq!(actual.get(&3), Some(&"Burnley".to_string()));
-        assert_eq!(actual.get(&6), Some(&"Brighton".to_string()));
-        assert_eq!(actual.get(&13), Some(&"Man City".to_string()));
+        assert_eq!(Some(&"Arsenal".to_string()), actual.get(&1));
+        assert_eq!(Some(&"Burnley".to_string()), actual.get(&3));
+        assert_eq!(Some(&"Brighton".to_string()), actual.get(&6));
+        assert_eq!(Some(&"Man City".to_string()), actual.get(&13));
     }
 
     #[test]
@@ -233,7 +265,7 @@ mod tests {
         let teams_by_team_id = build_teams_by_team_id(BOOTSTRAP_JSON);
         let actual = build_players_by_id(&teams_by_team_id, BOOTSTRAP_JSON);
 
-        assert_eq!(actual.get(&partial_expected.id), Some(&partial_expected));
+        assert_eq!(Some(&partial_expected), actual.get(&partial_expected.id));
     }
 
     #[test]
@@ -345,6 +377,155 @@ mod tests {
         let players_by_player_id = build_players_by_id(&teams_by_team_id.clone(), BOOTSTRAP_JSON);
         let actual = build_team(2239760, &players_by_player_id, PICKS_JSON, GAMEWEEK_JSON);
 
-        assert_eq!(actual, expected);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn should_detect_if_team_has_more_than_one_player_from_a_club() {
+        let team = Team {
+            team_id: 2239760,
+            team_name: "Pedro Cask Ale".to_string(),
+            owner: "Jake Peters".to_string(),
+            captain: Player {
+                id: 287,
+                name: "Jordan Pickford".to_string(),
+                club_id: 9,
+                club: "Everton".to_string(),
+            },
+            players: vec![
+                Player {
+                    id: 287,
+                    name: "Jordan Pickford".to_string(),
+                    club_id: 9,
+                    club: "Everton".to_string(),
+                },
+                Player {
+                    id: 291,
+                    name: "James Tarkowski".to_string(),
+                    club_id: 9,
+                    club: "Everton".to_string(),
+                },
+            ],
+        };
+
+        let actual = team_contains_at_most_one_player_per_club(team);
+        let expected = ValidationResult { is_valid: false, reason: "Jake Peters has shat the bed. Pedro Cask Ale contains more than 1 player from Everton (Jordan Pickford and James Tarkowski)".to_string() };
+
+        assert_eq!(expected, actual)
+    }
+
+    #[test]
+    fn should_detect_if_team_does_not_have_more_than_one_player_from_a_club() {
+        let team = Team {
+            team_id: 2239760,
+            team_name: "Pedro Cask Ale".to_string(),
+            owner: "Jake Peters".to_string(),
+            captain: Player {
+                id: 249,
+                name: "João Pedro Junqueira de Jesus".to_string(),
+                club_id: 7,
+                club: "Chelsea".to_string(),
+            },
+            players: vec![
+                Player {
+                    id: 287,
+                    name: "Jordan Pickford".to_string(),
+                    club_id: 9,
+                    club: "Everton".to_string(),
+                },
+                Player {
+                    id: 145,
+                    name: "Maxim De Cuyper".to_string(),
+                    club_id: 6,
+                    club: "Brighton".to_string(),
+                },
+                Player {
+                    id: 506,
+                    name: "Murillo Costa dos Santos".to_string(),
+                    club_id: 16,
+                    club: "Nott'm Forest".to_string(),
+                },
+                Player {
+                    id: 348,
+                    name: "Joe Rodon".to_string(),
+                    club_id: 11,
+                    club: "Leeds".to_string(),
+                },
+                Player {
+                    id: 119,
+                    name: "Bryan Mbeumo".to_string(),
+                    club_id: 14,
+                    club: "Man Utd".to_string(),
+                },
+                Player {
+                    id: 382,
+                    name: "Florian Wirtz".to_string(),
+                    club_id: 12,
+                    club: "Liverpool".to_string(),
+                },
+                Player {
+                    id: 413,
+                    name: "Omar Marmoush".to_string(),
+                    club_id: 13,
+                    club: "Man City".to_string(),
+                },
+                Player {
+                    id: 582,
+                    name: "Mohammed Kudus".to_string(),
+                    club_id: 18,
+                    club: "Spurs".to_string(),
+                },
+                Player {
+                    id: 666,
+                    name: "Viktor Gyökeres".to_string(),
+                    club_id: 1,
+                    club: "Arsenal".to_string(),
+                },
+                Player {
+                    id: 249,
+                    name: "João Pedro Junqueira de Jesus".to_string(),
+                    club_id: 7,
+                    club: "Chelsea".to_string(),
+                },
+                Player {
+                    id: 624,
+                    name: "Jarrod Bowen".to_string(),
+                    club_id: 19,
+                    club: "West Ham".to_string(),
+                },
+                Player {
+                    id: 470,
+                    name: "Martin Dúbravka".to_string(),
+                    club_id: 3,
+                    club: "Burnley".to_string(),
+                },
+                Player {
+                    id: 486,
+                    name: "Anthony Elanga".to_string(),
+                    club_id: 15,
+                    club: "Newcastle".to_string(),
+                },
+                Player {
+                    id: 541,
+                    name: "Reinildo Mandava".to_string(),
+                    club_id: 17,
+                    club: "Sunderland".to_string(),
+                },
+                Player {
+                    id: 256,
+                    name: "Daniel Muñoz Mejía".to_string(),
+                    club_id: 8,
+                    club: "Crystal Palace".to_string(),
+                },
+            ],
+        };
+
+        let actual = team_contains_at_most_one_player_per_club(team);
+        let expected = ValidationResult {
+            is_valid: true,
+            reason: "".to_string(),
+        };
+
+        assert_eq!(expected, actual)
     }
 }

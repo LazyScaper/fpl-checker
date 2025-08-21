@@ -97,7 +97,7 @@ fn build_teams_by_team_id(bootstrap_data: &str) -> HashMap<i64, String> {
 }
 
 fn build_players_by_id(
-    teams_by_team_id: HashMap<i64, String>,
+    teams_by_team_id: &HashMap<i64, String>,
     bootstrap_data: &str,
 ) -> HashMap<i64, Player> {
     let bootstrap_data: Value = from_str(bootstrap_data).unwrap();
@@ -145,7 +145,7 @@ fn build_players_by_id(
 
 fn build_team(
     team_id: i64,
-    players_by_player_id: HashMap<i64, Player>,
+    players_by_player_id: &HashMap<i64, Player>,
     picks_data: &str,
     gameweek_data: &str,
 ) -> Team {
@@ -183,12 +183,9 @@ fn build_team(
                     club: players_by_player_id.get(&id).unwrap().club.to_string(),
                 };
 
-                if match { pick_obj.get("is_captain").and_then(|v| v.as_bool()) } {
-                    Some(value) => value,
-                    None => {
-                        panic!("is_captain should be a boolean value")
-                    }
-                } {
+                if { pick_obj.get("is_captain").and_then(|v| v.as_bool()) }
+                    .unwrap_or_else(|| panic!("is_captain should be a boolean value"))
+                {
                     captain = player.clone();
                 }
 
@@ -234,7 +231,7 @@ mod tests {
             club: "Chelsea".to_string(),
         };
         let teams_by_team_id = build_teams_by_team_id(BOOTSTRAP_JSON);
-        let actual = build_players_by_id(teams_by_team_id, BOOTSTRAP_JSON);
+        let actual = build_players_by_id(&teams_by_team_id, BOOTSTRAP_JSON);
 
         assert_eq!(actual.get(&partial_expected.id), Some(&partial_expected));
     }
@@ -345,8 +342,8 @@ mod tests {
             ],
         };
         let teams_by_team_id = build_teams_by_team_id(BOOTSTRAP_JSON);
-        let players_by_player_id = build_players_by_id(teams_by_team_id.clone(), BOOTSTRAP_JSON);
-        let actual = build_team(2239760, players_by_player_id, PICKS_JSON, GAMEWEEK_JSON);
+        let players_by_player_id = build_players_by_id(&teams_by_team_id.clone(), BOOTSTRAP_JSON);
+        let actual = build_team(2239760, &players_by_player_id, PICKS_JSON, GAMEWEEK_JSON);
 
         assert_eq!(actual, expected);
     }

@@ -44,6 +44,22 @@ struct ValidationResult {
     reason: String,
 }
 
+impl ValidationResult {
+    fn valid() -> Self {
+        Self {
+            is_valid: true,
+            reason: "".to_string(),
+        }
+    }
+
+    fn invalid(reason: &str) -> Self {
+        Self {
+            is_valid: false,
+            reason: reason.to_string(),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Clone, Default)]
 struct Club {
     id: i64,
@@ -233,19 +249,13 @@ fn team_contains_players_under_10_m(team: Team) -> ValidationResult {
     }
 
     for (player_name, price) in players_above_price_threshold {
-        return ValidationResult {
-            is_valid: false,
-            reason: format!(
-                "Big wompers! {} has {} in their team. He is currently priced at {}m",
-                team.owner, player_name, price
-            ),
-        };
+        return ValidationResult::invalid(&format!(
+            "Big wompers! {} has {} in their team. He is currently priced at {}m",
+            team.owner, player_name, price
+        ));
     }
 
-    ValidationResult {
-        is_valid: true,
-        reason: "".to_string(),
-    }
+    ValidationResult::valid()
 }
 
 fn team_contains_at_most_one_player_per_club(team: Team) -> ValidationResult {
@@ -253,26 +263,19 @@ fn team_contains_at_most_one_player_per_club(team: Team) -> ValidationResult {
 
     for player in team.players {
         if seen_players_by_club_id.contains_key(&player.club.id) {
-            return ValidationResult {
-                is_valid: false,
-                reason: format!(
-                    "{} has shat the bed. {} contains more than 1 player from {} ({} and {})",
-                    &team.owner,
-                    &team.name,
-                    &player.club.name,
-                    seen_players_by_club_id.get(&player.club.id).unwrap().name,
-                    player.name
-                ),
-            };
-        }
-
+            return ValidationResult::invalid(&format!(
+                "{} has shat the bed. {} contains more than 1 player from {} ({} and {})",
+                &team.owner,
+                &team.name,
+                &player.club.name,
+                seen_players_by_club_id.get(&player.club.id).unwrap().name,
+                &player.name
+            ));
+        };
         seen_players_by_club_id.insert(player.club.id, player);
     }
 
-    ValidationResult {
-        is_valid: true,
-        reason: "".to_string(),
-    }
+    ValidationResult::valid()
 }
 
 fn team_contains_players_from_newly_promoted_clubs(
@@ -281,21 +284,15 @@ fn team_contains_players_from_newly_promoted_clubs(
 ) -> ValidationResult {
     for club_id in NEWLY_PROMOTED_CLUBS {
         if !team.players.iter().any(|player| player.club.id == club_id) {
-            return ValidationResult {
-                is_valid: false,
-                reason: format!(
-                    "Yikes! {} has not included players from {}. That's gonna sting",
-                    team.owner,
-                    clubs_by_club_id.get(&club_id).unwrap()
-                ),
-            };
+            return ValidationResult::invalid(&format!(
+                "Yikes! {} has not included players from {}. That's gonna sting",
+                team.owner,
+                clubs_by_club_id.get(&club_id).unwrap()
+            ));
         }
     }
 
-    ValidationResult {
-        is_valid: true,
-        reason: "".to_string(),
-    }
+    ValidationResult::valid()
 }
 
 fn main() {}
@@ -551,7 +548,9 @@ mod tests {
         };
 
         let actual = team_contains_at_most_one_player_per_club(team);
-        let expected = ValidationResult { is_valid: false, reason: "Jake Peters has shat the bed. Pedro Cask Ale contains more than 1 player from Everton (Pickford and James Tarkowski)".to_string() };
+        let expected = ValidationResult::invalid(
+            "Jake Peters has shat the bed. Pedro Cask Ale contains more than 1 player from Everton (Pickford and James Tarkowski)",
+        );
 
         assert_eq!(expected, actual)
     }
@@ -727,10 +726,7 @@ mod tests {
         };
 
         let actual = team_contains_at_most_one_player_per_club(team);
-        let expected = ValidationResult {
-            is_valid: true,
-            reason: "".to_string(),
-        };
+        let expected = ValidationResult::valid();
 
         assert_eq!(expected, actual)
     }
@@ -776,7 +772,9 @@ mod tests {
         };
 
         let actual = team_contains_players_under_10_m(team);
-        let expected = ValidationResult { is_valid: false, reason: "Big wompers! Jake Peters has James Tarkowski in their team. He is currently priced at 10.5m".to_string() };
+        let expected = ValidationResult::invalid(
+            "Big wompers! Jake Peters has James Tarkowski in their team. He is currently priced at 10.5m",
+        );
 
         assert_eq!(expected, actual)
     }
@@ -951,10 +949,7 @@ mod tests {
         };
 
         let actual = team_contains_players_under_10_m(team);
-        let expected = ValidationResult {
-            is_valid: true,
-            reason: "".to_string(),
-        };
+        let expected = ValidationResult::valid();
 
         assert_eq!(expected, actual)
     }
@@ -1021,11 +1016,9 @@ mod tests {
 
         let clubs_by_club_id = build_clubs_by_club_id(BOOTSTRAP_JSON);
         let actual = team_contains_players_from_newly_promoted_clubs(clubs_by_club_id, team);
-        let expected = ValidationResult {
-            is_valid: false,
-            reason: "Yikes! Jake Peters has not included players from Burnley. That's gonna sting"
-                .to_string(),
-        };
+        let expected = ValidationResult::invalid(
+            "Yikes! Jake Peters has not included players from Burnley. That's gonna sting",
+        );
 
         assert_eq!(expected, actual)
     }
@@ -1202,10 +1195,7 @@ mod tests {
 
         let clubs_by_club_id = build_clubs_by_club_id(BOOTSTRAP_JSON);
         let actual = team_contains_players_from_newly_promoted_clubs(clubs_by_club_id, team);
-        let expected = ValidationResult {
-            is_valid: true,
-            reason: "".to_string(),
-        };
+        let expected = ValidationResult::valid();
 
         assert_eq!(expected, actual)
     }

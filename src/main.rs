@@ -127,13 +127,9 @@ fn build_players_by_id(
                     None => panic!("team should be an integer"),
                     Some(team) => team,
                 };
-                let first_name = match { element_obj.get("first_name") } {
+                let web_name = match { element_obj.get("web_name") } {
                     Some(Value::String(first_name)) => first_name,
-                    _ => panic!("element_obj does not have first_name"),
-                };
-                let second_name = match { element_obj.get("second_name") } {
-                    Some(Value::String(second_name)) => second_name,
-                    _ => panic!("element_obj does not have second_name"),
+                    _ => panic!("element_obj does not have web_name"),
                 };
                 let price_in_100k = match { element_obj.get("now_cost").and_then(|v| v.as_f64()) } {
                     None => panic!("now_cost should be an integer"),
@@ -143,7 +139,7 @@ fn build_players_by_id(
 
                 let player = Player {
                     id,
-                    name: format!("{} {}", first_name, second_name),
+                    name: web_name.to_string(),
                     price_in_millions,
                     club: Club {
                         id: club_id,
@@ -264,10 +260,7 @@ fn team_contains_at_most_one_player_per_club(team: Team) -> ValidationResult {
                     &team.owner,
                     &team.name,
                     &player.club.name,
-                    seen_players_by_club_id
-                        .get(&player.club.id)
-                        .unwrap()
-                        .name,
+                    seen_players_by_club_id.get(&player.club.id).unwrap().name,
                     player.name
                 ),
             };
@@ -287,11 +280,7 @@ fn team_contains_players_from_newly_promoted_clubs(
     team: Team,
 ) -> ValidationResult {
     for club_id in NEWLY_PROMOTED_CLUBS {
-        if !team
-            .players
-            .iter()
-            .any(|player| player.club.id == club_id)
-        {
+        if !team.players.iter().any(|player| player.club.id == club_id) {
             return ValidationResult {
                 is_valid: false,
                 reason: format!(
@@ -332,7 +321,7 @@ mod tests {
     fn should_build_players_by_id_from_bootstrap_data() {
         let partial_expected = Player {
             id: 249,
-            name: "João Pedro Junqueira de Jesus".to_string(),
+            name: "João Pedro".to_string(),
             price_in_millions: 7.5,
             club: Club {
                 id: 7,
@@ -354,7 +343,7 @@ mod tests {
             owner: "Jake Peters".to_string(),
             captain: Player {
                 id: 249,
-                name: "João Pedro Junqueira de Jesus".to_string(),
+                name: "João Pedro".to_string(),
                 price_in_millions: 7.5,
                 club: Club {
                     id: 7,
@@ -364,7 +353,7 @@ mod tests {
             players: vec![
                 Player {
                     id: 287,
-                    name: "Jordan Pickford".to_string(),
+                    name: "Pickford".to_string(),
                     price_in_millions: 5.5,
                     club: Club {
                         id: 9,
@@ -374,7 +363,7 @@ mod tests {
                 },
                 Player {
                     id: 145,
-                    name: "Maxim De Cuyper".to_string(),
+                    name: "De Cuyper".to_string(),
                     price_in_millions: 4.5,
                     club: Club {
                         id: 6,
@@ -384,7 +373,7 @@ mod tests {
                 },
                 Player {
                     id: 506,
-                    name: "Murillo Costa dos Santos".to_string(),
+                    name: "Murillo".to_string(),
                     price_in_millions: 5.5,
                     club: Club {
                         id: 16,
@@ -394,7 +383,7 @@ mod tests {
                 },
                 Player {
                     id: 348,
-                    name: "Joe Rodon".to_string(),
+                    name: "Rodon".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
                         id: 11,
@@ -404,7 +393,7 @@ mod tests {
                 },
                 Player {
                     id: 119,
-                    name: "Bryan Mbeumo".to_string(),
+                    name: "Mbeumo".to_string(),
                     price_in_millions: 8.0,
                     club: Club {
                         id: 14,
@@ -414,7 +403,7 @@ mod tests {
                 },
                 Player {
                     id: 382,
-                    name: "Florian Wirtz".to_string(),
+                    name: "Wirtz".to_string(),
                     price_in_millions: 8.5,
                     club: Club {
                         id: 12,
@@ -424,7 +413,7 @@ mod tests {
                 },
                 Player {
                     id: 413,
-                    name: "Omar Marmoush".to_string(),
+                    name: "Marmoush".to_string(),
                     price_in_millions: 8.5,
                     club: Club {
                         id: 13,
@@ -434,7 +423,7 @@ mod tests {
                 },
                 Player {
                     id: 582,
-                    name: "Mohammed Kudus".to_string(),
+                    name: "Kudus".to_string(),
                     price_in_millions: 6.5,
                     club: Club {
                         id: 18,
@@ -444,7 +433,7 @@ mod tests {
                 },
                 Player {
                     id: 666,
-                    name: "Viktor Gyökeres".to_string(),
+                    name: "Gyökeres".to_string(),
                     price_in_millions: 9.0,
                     club: Club {
                         id: 1,
@@ -454,7 +443,7 @@ mod tests {
                 },
                 Player {
                     id: 249,
-                    name: "João Pedro Junqueira de Jesus".to_string(),
+                    name: "João Pedro".to_string(),
                     price_in_millions: 7.5,
                     club: Club {
                         id: 7,
@@ -464,7 +453,7 @@ mod tests {
                 },
                 Player {
                     id: 624,
-                    name: "Jarrod Bowen".to_string(),
+                    name: "Bowen".to_string(),
                     price_in_millions: 8.0,
                     club: Club {
                         id: 19,
@@ -474,7 +463,7 @@ mod tests {
                 },
                 Player {
                     id: 470,
-                    name: "Martin Dúbravka".to_string(),
+                    name: "Dúbravka".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
                         id: 3,
@@ -484,7 +473,7 @@ mod tests {
                 },
                 Player {
                     id: 486,
-                    name: "Anthony Elanga".to_string(),
+                    name: "Elanga".to_string(),
                     price_in_millions: 7.0,
                     club: Club {
                         id: 15,
@@ -494,7 +483,7 @@ mod tests {
                 },
                 Player {
                     id: 541,
-                    name: "Reinildo Mandava".to_string(),
+                    name: "Reinildo".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
                         id: 17,
@@ -504,7 +493,7 @@ mod tests {
                 },
                 Player {
                     id: 256,
-                    name: "Daniel Muñoz Mejía".to_string(),
+                    name: "Muñoz".to_string(),
                     price_in_millions: 5.5,
                     club: Club {
                         id: 8,
@@ -529,7 +518,7 @@ mod tests {
             owner: "Jake Peters".to_string(),
             captain: Player {
                 id: 287,
-                name: "Jordan Pickford".to_string(),
+                name: "Pickford".to_string(),
                 price_in_millions: 7.5,
                 club: Club {
                     id: 9,
@@ -540,7 +529,7 @@ mod tests {
             players: vec![
                 Player {
                     id: 287,
-                    name: "Jordan Pickford".to_string(),
+                    name: "Pickford".to_string(),
                     price_in_millions: 7.5,
                     club: Club {
                         id: 9,
@@ -562,7 +551,7 @@ mod tests {
         };
 
         let actual = team_contains_at_most_one_player_per_club(team);
-        let expected = ValidationResult { is_valid: false, reason: "Jake Peters has shat the bed. Pedro Cask Ale contains more than 1 player from Everton (Jordan Pickford and James Tarkowski)".to_string() };
+        let expected = ValidationResult { is_valid: false, reason: "Jake Peters has shat the bed. Pedro Cask Ale contains more than 1 player from Everton (Pickford and James Tarkowski)".to_string() };
 
         assert_eq!(expected, actual)
     }
@@ -575,7 +564,7 @@ mod tests {
             owner: "Jake Peters".to_string(),
             captain: Player {
                 id: 249,
-                name: "João Pedro Junqueira de Jesus".to_string(),
+                name: "João Pedro".to_string(),
                 price_in_millions: 7.5,
                 club: Club {
                     id: 7,
@@ -586,7 +575,7 @@ mod tests {
             players: vec![
                 Player {
                     id: 287,
-                    name: "Jordan Pickford".to_string(),
+                    name: "Pickford".to_string(),
                     price_in_millions: 5.5,
                     club: Club {
                         id: 9,
@@ -596,7 +585,7 @@ mod tests {
                 },
                 Player {
                     id: 145,
-                    name: "Maxim De Cuyper".to_string(),
+                    name: "De Cuyper".to_string(),
                     price_in_millions: 4.5,
                     club: Club {
                         id: 6,
@@ -606,7 +595,7 @@ mod tests {
                 },
                 Player {
                     id: 506,
-                    name: "Murillo Costa dos Santos".to_string(),
+                    name: "Murillo".to_string(),
                     price_in_millions: 5.5,
                     club: Club {
                         id: 16,
@@ -616,7 +605,7 @@ mod tests {
                 },
                 Player {
                     id: 348,
-                    name: "Joe Rodon".to_string(),
+                    name: "Rodon".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
                         id: 11,
@@ -626,7 +615,7 @@ mod tests {
                 },
                 Player {
                     id: 119,
-                    name: "Bryan Mbeumo".to_string(),
+                    name: "Mbeumo".to_string(),
                     price_in_millions: 8.0,
                     club: Club {
                         id: 14,
@@ -636,7 +625,7 @@ mod tests {
                 },
                 Player {
                     id: 382,
-                    name: "Florian Wirtz".to_string(),
+                    name: "Wirtz".to_string(),
                     price_in_millions: 8.5,
                     club: Club {
                         id: 12,
@@ -646,7 +635,7 @@ mod tests {
                 },
                 Player {
                     id: 413,
-                    name: "Omar Marmoush".to_string(),
+                    name: "Marmoush".to_string(),
                     price_in_millions: 8.4,
                     club: Club {
                         id: 13,
@@ -656,7 +645,7 @@ mod tests {
                 },
                 Player {
                     id: 582,
-                    name: "Mohammed Kudus".to_string(),
+                    name: "Kudus".to_string(),
                     price_in_millions: 6.5,
                     club: Club {
                         id: 18,
@@ -666,7 +655,7 @@ mod tests {
                 },
                 Player {
                     id: 666,
-                    name: "Viktor Gyökeres".to_string(),
+                    name: "Gyökeres".to_string(),
                     price_in_millions: 9.0,
                     club: Club {
                         id: 1,
@@ -676,7 +665,7 @@ mod tests {
                 },
                 Player {
                     id: 249,
-                    name: "João Pedro Junqueira de Jesus".to_string(),
+                    name: "João Pedro".to_string(),
                     price_in_millions: 7.5,
                     club: Club {
                         id: 7,
@@ -686,7 +675,7 @@ mod tests {
                 },
                 Player {
                     id: 624,
-                    name: "Jarrod Bowen".to_string(),
+                    name: "Bowen".to_string(),
                     price_in_millions: 8.0,
                     club: Club {
                         id: 19,
@@ -696,7 +685,7 @@ mod tests {
                 },
                 Player {
                     id: 470,
-                    name: "Martin Dúbravka".to_string(),
+                    name: "Dúbravka".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
                         id: 3,
@@ -706,7 +695,7 @@ mod tests {
                 },
                 Player {
                     id: 486,
-                    name: "Anthony Elanga".to_string(),
+                    name: "Elanga".to_string(),
                     price_in_millions: 7.0,
                     club: Club {
                         id: 15,
@@ -716,7 +705,7 @@ mod tests {
                 },
                 Player {
                     id: 541,
-                    name: "Reinildo Mandava".to_string(),
+                    name: "Reinildo".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
                         id: 17,
@@ -726,7 +715,7 @@ mod tests {
                 },
                 Player {
                     id: 256,
-                    name: "Daniel Muñoz Mejía".to_string(),
+                    name: "Muñoz".to_string(),
                     price_in_millions: 5.5,
                     club: Club {
                         id: 8,
@@ -754,7 +743,7 @@ mod tests {
             owner: "Jake Peters".to_string(),
             captain: Player {
                 id: 287,
-                name: "Jordan Pickford".to_string(),
+                name: "Pickford".to_string(),
                 price_in_millions: 7.5,
                 club: Club {
                     id: 9,
@@ -765,7 +754,7 @@ mod tests {
             players: vec![
                 Player {
                     id: 287,
-                    name: "Jordan Pickford".to_string(),
+                    name: "Pickford".to_string(),
                     price_in_millions: 7.5,
                     club: Club {
                         id: 9,
@@ -799,7 +788,7 @@ mod tests {
             owner: "Jake Peters".to_string(),
             captain: Player {
                 id: 249,
-                name: "João Pedro Junqueira de Jesus".to_string(),
+                name: "João Pedro".to_string(),
                 price_in_millions: 7.5,
                 club: Club {
                     id: 7,
@@ -810,7 +799,7 @@ mod tests {
             players: vec![
                 Player {
                     id: 287,
-                    name: "Jordan Pickford".to_string(),
+                    name: "Pickford".to_string(),
                     price_in_millions: 5.5,
                     club: Club {
                         id: 9,
@@ -820,7 +809,7 @@ mod tests {
                 },
                 Player {
                     id: 145,
-                    name: "Maxim De Cuyper".to_string(),
+                    name: "De Cuyper".to_string(),
                     price_in_millions: 4.5,
                     club: Club {
                         id: 6,
@@ -830,7 +819,7 @@ mod tests {
                 },
                 Player {
                     id: 506,
-                    name: "Murillo Costa dos Santos".to_string(),
+                    name: "Murillo".to_string(),
                     price_in_millions: 5.5,
                     club: Club {
                         id: 16,
@@ -840,7 +829,7 @@ mod tests {
                 },
                 Player {
                     id: 348,
-                    name: "Joe Rodon".to_string(),
+                    name: "Rodon".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
                         id: 11,
@@ -850,7 +839,7 @@ mod tests {
                 },
                 Player {
                     id: 119,
-                    name: "Bryan Mbeumo".to_string(),
+                    name: "Mbeumo".to_string(),
                     price_in_millions: 8.0,
                     club: Club {
                         id: 14,
@@ -860,7 +849,7 @@ mod tests {
                 },
                 Player {
                     id: 382,
-                    name: "Florian Wirtz".to_string(),
+                    name: "Wirtz".to_string(),
                     price_in_millions: 8.5,
                     club: Club {
                         id: 12,
@@ -870,7 +859,7 @@ mod tests {
                 },
                 Player {
                     id: 413,
-                    name: "Omar Marmoush".to_string(),
+                    name: "Marmoush".to_string(),
                     price_in_millions: 8.4,
                     club: Club {
                         id: 13,
@@ -880,7 +869,7 @@ mod tests {
                 },
                 Player {
                     id: 582,
-                    name: "Mohammed Kudus".to_string(),
+                    name: "Kudus".to_string(),
                     price_in_millions: 6.5,
                     club: Club {
                         id: 18,
@@ -890,7 +879,7 @@ mod tests {
                 },
                 Player {
                     id: 666,
-                    name: "Viktor Gyökeres".to_string(),
+                    name: "Gyökeres".to_string(),
                     price_in_millions: 9.0,
                     club: Club {
                         id: 1,
@@ -900,7 +889,7 @@ mod tests {
                 },
                 Player {
                     id: 249,
-                    name: "João Pedro Junqueira de Jesus".to_string(),
+                    name: "João Pedro".to_string(),
                     price_in_millions: 7.5,
                     club: Club {
                         id: 7,
@@ -910,7 +899,7 @@ mod tests {
                 },
                 Player {
                     id: 624,
-                    name: "Jarrod Bowen".to_string(),
+                    name: "Bowen".to_string(),
                     price_in_millions: 8.0,
                     club: Club {
                         id: 19,
@@ -920,7 +909,7 @@ mod tests {
                 },
                 Player {
                     id: 470,
-                    name: "Martin Dúbravka".to_string(),
+                    name: "Dúbravka".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
                         id: 3,
@@ -930,7 +919,7 @@ mod tests {
                 },
                 Player {
                     id: 486,
-                    name: "Anthony Elanga".to_string(),
+                    name: "Elanga".to_string(),
                     price_in_millions: 7.0,
                     club: Club {
                         id: 15,
@@ -940,7 +929,7 @@ mod tests {
                 },
                 Player {
                     id: 541,
-                    name: "Reinildo Mandava".to_string(),
+                    name: "Reinildo".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
                         id: 17,
@@ -950,7 +939,7 @@ mod tests {
                 },
                 Player {
                     id: 256,
-                    name: "Daniel Muñoz Mejía".to_string(),
+                    name: "Muñoz".to_string(),
                     price_in_millions: 5.5,
                     club: Club {
                         id: 8,
@@ -978,7 +967,7 @@ mod tests {
             owner: "Jake Peters".to_string(),
             captain: Player {
                 id: 287,
-                name: "Jordan Pickford".to_string(),
+                name: "Pickford".to_string(),
                 price_in_millions: 7.5,
                 club: Club {
                     id: 9,
@@ -989,7 +978,7 @@ mod tests {
             players: vec![
                 Player {
                     id: 287,
-                    name: "Jordan Pickford".to_string(),
+                    name: "Pickford".to_string(),
                     price_in_millions: 7.5,
                     club: Club {
                         id: 9,
@@ -1009,7 +998,7 @@ mod tests {
                 },
                 Player {
                     id: 348,
-                    name: "Joe Rodon".to_string(),
+                    name: "Rodon".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
                         id: 11,
@@ -1019,7 +1008,7 @@ mod tests {
                 },
                 Player {
                     id: 541,
-                    name: "Reinildo Mandava".to_string(),
+                    name: "Reinildo".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
                         id: 17,
@@ -1049,7 +1038,7 @@ mod tests {
             owner: "Jake Peters".to_string(),
             captain: Player {
                 id: 249,
-                name: "João Pedro Junqueira de Jesus".to_string(),
+                name: "João Pedro".to_string(),
                 price_in_millions: 7.5,
                 club: Club {
                     id: 7,
@@ -1060,7 +1049,7 @@ mod tests {
             players: vec![
                 Player {
                     id: 287,
-                    name: "Jordan Pickford".to_string(),
+                    name: "Pickford".to_string(),
                     price_in_millions: 5.5,
                     club: Club {
                         id: 9,
@@ -1070,7 +1059,7 @@ mod tests {
                 },
                 Player {
                     id: 145,
-                    name: "Maxim De Cuyper".to_string(),
+                    name: "De Cuyper".to_string(),
                     price_in_millions: 4.5,
                     club: Club {
                         id: 6,
@@ -1080,7 +1069,7 @@ mod tests {
                 },
                 Player {
                     id: 506,
-                    name: "Murillo Costa dos Santos".to_string(),
+                    name: "Murillo".to_string(),
                     price_in_millions: 5.5,
                     club: Club {
                         id: 16,
@@ -1090,7 +1079,7 @@ mod tests {
                 },
                 Player {
                     id: 348,
-                    name: "Joe Rodon".to_string(),
+                    name: "Rodon".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
                         id: 11,
@@ -1100,7 +1089,7 @@ mod tests {
                 },
                 Player {
                     id: 119,
-                    name: "Bryan Mbeumo".to_string(),
+                    name: "Mbeumo".to_string(),
                     price_in_millions: 8.0,
                     club: Club {
                         id: 14,
@@ -1110,7 +1099,7 @@ mod tests {
                 },
                 Player {
                     id: 382,
-                    name: "Florian Wirtz".to_string(),
+                    name: "Wirtz".to_string(),
                     price_in_millions: 8.5,
                     club: Club {
                         id: 12,
@@ -1120,7 +1109,7 @@ mod tests {
                 },
                 Player {
                     id: 413,
-                    name: "Omar Marmoush".to_string(),
+                    name: "Marmoush".to_string(),
                     price_in_millions: 8.4,
                     club: Club {
                         id: 13,
@@ -1130,7 +1119,7 @@ mod tests {
                 },
                 Player {
                     id: 582,
-                    name: "Mohammed Kudus".to_string(),
+                    name: "Kudus".to_string(),
                     price_in_millions: 6.5,
                     club: Club {
                         id: 18,
@@ -1140,7 +1129,7 @@ mod tests {
                 },
                 Player {
                     id: 666,
-                    name: "Viktor Gyökeres".to_string(),
+                    name: "Gyökeres".to_string(),
                     price_in_millions: 9.0,
                     club: Club {
                         id: 1,
@@ -1150,7 +1139,7 @@ mod tests {
                 },
                 Player {
                     id: 249,
-                    name: "João Pedro Junqueira de Jesus".to_string(),
+                    name: "João Pedro".to_string(),
                     price_in_millions: 7.5,
                     club: Club {
                         id: 7,
@@ -1160,7 +1149,7 @@ mod tests {
                 },
                 Player {
                     id: 624,
-                    name: "Jarrod Bowen".to_string(),
+                    name: "Bowen".to_string(),
                     price_in_millions: 8.0,
                     club: Club {
                         id: 19,
@@ -1170,7 +1159,7 @@ mod tests {
                 },
                 Player {
                     id: 470,
-                    name: "Martin Dúbravka".to_string(),
+                    name: "Dúbravka".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
                         id: 3,
@@ -1180,7 +1169,7 @@ mod tests {
                 },
                 Player {
                     id: 486,
-                    name: "Anthony Elanga".to_string(),
+                    name: "Elanga".to_string(),
                     price_in_millions: 7.0,
                     club: Club {
                         id: 15,
@@ -1190,7 +1179,7 @@ mod tests {
                 },
                 Player {
                     id: 541,
-                    name: "Reinildo Mandava".to_string(),
+                    name: "Reinildo".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
                         id: 17,
@@ -1200,7 +1189,7 @@ mod tests {
                 },
                 Player {
                     id: 256,
-                    name: "Daniel Muñoz Mejía".to_string(),
+                    name: "Muñoz".to_string(),
                     price_in_millions: 5.5,
                     club: Club {
                         id: 8,

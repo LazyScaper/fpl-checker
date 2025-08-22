@@ -45,12 +45,17 @@ struct ValidationResult {
 }
 
 #[derive(Debug, PartialEq, Clone, Default)]
+struct Club {
+    club_id: i64,
+    club: String,
+}
+
+#[derive(Debug, PartialEq, Clone, Default)]
 struct Player {
     id: i64,
     name: String,
     price_in_millions: f64,
-    club_id: i64,
-    club: String,
+    club: Club,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -140,12 +145,14 @@ fn build_players_by_id(
                     id,
                     name: format!("{} {}", first_name, second_name),
                     price_in_millions,
-                    club_id: team_id,
-                    club: match { teams_by_team_id.get(&team_id) } {
-                        Some(team_name) => team_name.to_string(),
-                        _ => {
-                            panic!("Could not find a team")
-                        }
+                    club: Club {
+                        club_id: team_id,
+                        club: match { teams_by_team_id.get(&team_id) } {
+                            Some(team_name) => team_name.to_string(),
+                            _ => {
+                                panic!("Could not find a team")
+                            }
+                        },
                     },
                 };
 
@@ -194,8 +201,10 @@ fn build_team(
                     id,
                     name: players_by_player_id.get(&id).unwrap().name.clone(),
                     price_in_millions: players_by_player_id.get(&id).unwrap().price_in_millions,
-                    club_id: players_by_player_id.get(&id).unwrap().club_id,
-                    club: players_by_player_id.get(&id).unwrap().club.to_string(),
+                    club: Club {
+                        club_id: players_by_player_id.get(&id).unwrap().club.club_id,
+                        club: players_by_player_id.get(&id).unwrap().club.club.to_string(),
+                    },
                 };
 
                 if { pick_obj.get("is_captain").and_then(|v| v.as_bool()) }
@@ -247,21 +256,24 @@ fn team_contains_at_most_one_player_per_club(team: Team) -> ValidationResult {
     let mut seen_players_by_club_id: HashMap<i64, Player> = HashMap::new();
 
     for player in team.players {
-        if seen_players_by_club_id.contains_key(&player.club_id) {
+        if seen_players_by_club_id.contains_key(&player.club.club_id) {
             return ValidationResult {
                 is_valid: false,
                 reason: format!(
                     "{} has shat the bed. {} contains more than 1 player from {} ({} and {})",
                     &team.owner,
                     &team.team_name,
-                    &player.club,
-                    seen_players_by_club_id.get(&player.club_id).unwrap().name,
+                    &player.club.club,
+                    seen_players_by_club_id
+                        .get(&player.club.club_id)
+                        .unwrap()
+                        .name,
                     player.name
                 ),
             };
         }
 
-        seen_players_by_club_id.insert(player.club_id, player);
+        seen_players_by_club_id.insert(player.club.club_id, player);
     }
 
     ValidationResult {
@@ -275,7 +287,11 @@ fn team_contains_players_from_newly_promoted_clubs(
     team: Team,
 ) -> ValidationResult {
     for club_id in NEWLY_PROMOTED_CLUBS {
-        if !team.players.iter().any(|player| player.club_id == club_id) {
+        if !team
+            .players
+            .iter()
+            .any(|player| player.club.club_id == club_id)
+        {
             return ValidationResult {
                 is_valid: false,
                 reason: format!(
@@ -318,9 +334,12 @@ mod tests {
             id: 249,
             name: "João Pedro Junqueira de Jesus".to_string(),
             price_in_millions: 7.5,
-            club_id: 7,
-            club: "Chelsea".to_string(),
+            club: Club {
+                club_id: 7,
+                club: "Chelsea".to_string(),
+            },
         };
+
         let teams_by_team_id = build_teams_by_team_id(BOOTSTRAP_JSON);
         let actual = build_players_by_id(&teams_by_team_id, BOOTSTRAP_JSON);
 
@@ -337,114 +356,161 @@ mod tests {
                 id: 249,
                 name: "João Pedro Junqueira de Jesus".to_string(),
                 price_in_millions: 7.5,
-                club_id: 7,
-                club: "Chelsea".to_string(),
+                club: Club {
+                    club_id: 7,
+                    club: "Chelsea".to_string(),
+                },
             },
             players: vec![
                 Player {
                     id: 287,
                     name: "Jordan Pickford".to_string(),
                     price_in_millions: 5.5,
-                    club_id: 9,
-                    club: "Everton".to_string(),
+                    club: Club {
+                        club_id: 9,
+
+                        club: "Everton".to_string(),
+                    },
                 },
                 Player {
                     id: 145,
                     name: "Maxim De Cuyper".to_string(),
                     price_in_millions: 4.5,
-                    club_id: 6,
-                    club: "Brighton".to_string(),
+                    club: Club {
+                        club_id: 6,
+
+                        club: "Brighton".to_string(),
+                    },
                 },
                 Player {
                     id: 506,
                     name: "Murillo Costa dos Santos".to_string(),
                     price_in_millions: 5.5,
-                    club_id: 16,
-                    club: "Nott'm Forest".to_string(),
+                    club: Club {
+                        club_id: 16,
+
+                        club: "Nott'm Forest".to_string(),
+                    },
                 },
                 Player {
                     id: 348,
                     name: "Joe Rodon".to_string(),
                     price_in_millions: 4.0,
-                    club_id: 11,
-                    club: "Leeds".to_string(),
+                    club: Club {
+                        club_id: 11,
+
+                        club: "Leeds".to_string(),
+                    },
                 },
                 Player {
                     id: 119,
                     name: "Bryan Mbeumo".to_string(),
                     price_in_millions: 8.0,
-                    club_id: 14,
-                    club: "Man Utd".to_string(),
+                    club: Club {
+                        club_id: 14,
+
+                        club: "Man Utd".to_string(),
+                    },
                 },
                 Player {
                     id: 382,
                     name: "Florian Wirtz".to_string(),
                     price_in_millions: 8.5,
-                    club_id: 12,
-                    club: "Liverpool".to_string(),
+                    club: Club {
+                        club_id: 12,
+
+                        club: "Liverpool".to_string(),
+                    },
                 },
                 Player {
                     id: 413,
                     name: "Omar Marmoush".to_string(),
                     price_in_millions: 8.5,
-                    club_id: 13,
-                    club: "Man City".to_string(),
+                    club: Club {
+                        club_id: 13,
+
+                        club: "Man City".to_string(),
+                    },
                 },
                 Player {
                     id: 582,
                     name: "Mohammed Kudus".to_string(),
                     price_in_millions: 6.5,
-                    club_id: 18,
-                    club: "Spurs".to_string(),
+                    club: Club {
+                        club_id: 18,
+
+                        club: "Spurs".to_string(),
+                    },
                 },
                 Player {
                     id: 666,
                     name: "Viktor Gyökeres".to_string(),
                     price_in_millions: 9.0,
-                    club_id: 1,
-                    club: "Arsenal".to_string(),
+                    club: Club {
+                        club_id: 1,
+
+                        club: "Arsenal".to_string(),
+                    },
                 },
                 Player {
                     id: 249,
                     name: "João Pedro Junqueira de Jesus".to_string(),
                     price_in_millions: 7.5,
-                    club_id: 7,
-                    club: "Chelsea".to_string(),
+                    club: Club {
+                        club_id: 7,
+
+                        club: "Chelsea".to_string(),
+                    },
                 },
                 Player {
                     id: 624,
                     name: "Jarrod Bowen".to_string(),
                     price_in_millions: 8.0,
-                    club_id: 19,
-                    club: "West Ham".to_string(),
+                    club: Club {
+                        club_id: 19,
+
+                        club: "West Ham".to_string(),
+                    },
                 },
                 Player {
                     id: 470,
                     name: "Martin Dúbravka".to_string(),
                     price_in_millions: 4.0,
-                    club_id: 3,
-                    club: "Burnley".to_string(),
+                    club: Club {
+                        club_id: 3,
+
+                        club: "Burnley".to_string(),
+                    },
                 },
                 Player {
                     id: 486,
                     name: "Anthony Elanga".to_string(),
                     price_in_millions: 7.0,
-                    club_id: 15,
-                    club: "Newcastle".to_string(),
+                    club: Club {
+                        club_id: 15,
+
+                        club: "Newcastle".to_string(),
+                    },
                 },
                 Player {
                     id: 541,
                     name: "Reinildo Mandava".to_string(),
                     price_in_millions: 4.0,
-                    club_id: 17,
-                    club: "Sunderland".to_string(),
+                    club: Club {
+                        club_id: 17,
+
+                        club: "Sunderland".to_string(),
+                    },
                 },
                 Player {
                     id: 256,
                     name: "Daniel Muñoz Mejía".to_string(),
                     price_in_millions: 5.5,
-                    club_id: 8,
-                    club: "Crystal Palace".to_string(),
+                    club: Club {
+                        club_id: 8,
+
+                        club: "Crystal Palace".to_string(),
+                    },
                 },
             ],
         };
@@ -465,23 +531,32 @@ mod tests {
                 id: 287,
                 name: "Jordan Pickford".to_string(),
                 price_in_millions: 7.5,
-                club_id: 9,
-                club: "Everton".to_string(),
+                club: Club {
+                    club_id: 9,
+
+                    club: "Everton".to_string(),
+                },
             },
             players: vec![
                 Player {
                     id: 287,
                     name: "Jordan Pickford".to_string(),
                     price_in_millions: 7.5,
-                    club_id: 9,
-                    club: "Everton".to_string(),
+                    club: Club {
+                        club_id: 9,
+
+                        club: "Everton".to_string(),
+                    },
                 },
                 Player {
                     id: 291,
                     name: "James Tarkowski".to_string(),
                     price_in_millions: 5.5,
-                    club_id: 9,
-                    club: "Everton".to_string(),
+                    club: Club {
+                        club_id: 9,
+
+                        club: "Everton".to_string(),
+                    },
                 },
             ],
         };
@@ -502,114 +577,162 @@ mod tests {
                 id: 249,
                 name: "João Pedro Junqueira de Jesus".to_string(),
                 price_in_millions: 7.5,
-                club_id: 7,
-                club: "Chelsea".to_string(),
+                club: Club {
+                    club_id: 7,
+
+                    club: "Chelsea".to_string(),
+                },
             },
             players: vec![
                 Player {
                     id: 287,
                     name: "Jordan Pickford".to_string(),
                     price_in_millions: 5.5,
-                    club_id: 9,
-                    club: "Everton".to_string(),
+                    club: Club {
+                        club_id: 9,
+
+                        club: "Everton".to_string(),
+                    },
                 },
                 Player {
                     id: 145,
                     name: "Maxim De Cuyper".to_string(),
                     price_in_millions: 4.5,
-                    club_id: 6,
-                    club: "Brighton".to_string(),
+                    club: Club {
+                        club_id: 6,
+
+                        club: "Brighton".to_string(),
+                    },
                 },
                 Player {
                     id: 506,
                     name: "Murillo Costa dos Santos".to_string(),
                     price_in_millions: 5.5,
-                    club_id: 16,
-                    club: "Nott'm Forest".to_string(),
+                    club: Club {
+                        club_id: 16,
+
+                        club: "Nott'm Forest".to_string(),
+                    },
                 },
                 Player {
                     id: 348,
                     name: "Joe Rodon".to_string(),
                     price_in_millions: 4.0,
-                    club_id: 11,
-                    club: "Leeds".to_string(),
+                    club: Club {
+                        club_id: 11,
+
+                        club: "Leeds".to_string(),
+                    },
                 },
                 Player {
                     id: 119,
                     name: "Bryan Mbeumo".to_string(),
                     price_in_millions: 8.0,
-                    club_id: 14,
-                    club: "Man Utd".to_string(),
+                    club: Club {
+                        club_id: 14,
+
+                        club: "Man Utd".to_string(),
+                    },
                 },
                 Player {
                     id: 382,
                     name: "Florian Wirtz".to_string(),
                     price_in_millions: 8.5,
-                    club_id: 12,
-                    club: "Liverpool".to_string(),
+                    club: Club {
+                        club_id: 12,
+
+                        club: "Liverpool".to_string(),
+                    },
                 },
                 Player {
                     id: 413,
                     name: "Omar Marmoush".to_string(),
                     price_in_millions: 8.4,
-                    club_id: 13,
-                    club: "Man City".to_string(),
+                    club: Club {
+                        club_id: 13,
+
+                        club: "Man City".to_string(),
+                    },
                 },
                 Player {
                     id: 582,
                     name: "Mohammed Kudus".to_string(),
                     price_in_millions: 6.5,
-                    club_id: 18,
-                    club: "Spurs".to_string(),
+                    club: Club {
+                        club_id: 18,
+
+                        club: "Spurs".to_string(),
+                    },
                 },
                 Player {
                     id: 666,
                     name: "Viktor Gyökeres".to_string(),
                     price_in_millions: 9.0,
-                    club_id: 1,
-                    club: "Arsenal".to_string(),
+                    club: Club {
+                        club_id: 1,
+
+                        club: "Arsenal".to_string(),
+                    },
                 },
                 Player {
                     id: 249,
                     name: "João Pedro Junqueira de Jesus".to_string(),
                     price_in_millions: 7.5,
-                    club_id: 7,
-                    club: "Chelsea".to_string(),
+                    club: Club {
+                        club_id: 7,
+
+                        club: "Chelsea".to_string(),
+                    },
                 },
                 Player {
                     id: 624,
                     name: "Jarrod Bowen".to_string(),
                     price_in_millions: 8.0,
-                    club_id: 19,
-                    club: "West Ham".to_string(),
+                    club: Club {
+                        club_id: 19,
+
+                        club: "West Ham".to_string(),
+                    },
                 },
                 Player {
                     id: 470,
                     name: "Martin Dúbravka".to_string(),
                     price_in_millions: 4.0,
-                    club_id: 3,
-                    club: "Burnley".to_string(),
+                    club: Club {
+                        club_id: 3,
+
+                        club: "Burnley".to_string(),
+                    },
                 },
                 Player {
                     id: 486,
                     name: "Anthony Elanga".to_string(),
                     price_in_millions: 7.0,
-                    club_id: 15,
-                    club: "Newcastle".to_string(),
+                    club: Club {
+                        club_id: 15,
+
+                        club: "Newcastle".to_string(),
+                    },
                 },
                 Player {
                     id: 541,
                     name: "Reinildo Mandava".to_string(),
                     price_in_millions: 4.0,
-                    club_id: 17,
-                    club: "Sunderland".to_string(),
+                    club: Club {
+                        club_id: 17,
+
+                        club: "Sunderland".to_string(),
+                    },
                 },
                 Player {
                     id: 256,
                     name: "Daniel Muñoz Mejía".to_string(),
                     price_in_millions: 5.5,
-                    club_id: 8,
-                    club: "Crystal Palace".to_string(),
+                    club: Club {
+                        club_id: 8,
+
+                        club: "Crystal Palace".to_string(),
+                    },
                 },
             ],
         };
@@ -633,23 +756,32 @@ mod tests {
                 id: 287,
                 name: "Jordan Pickford".to_string(),
                 price_in_millions: 7.5,
-                club_id: 9,
-                club: "Everton".to_string(),
+                club: Club {
+                    club_id: 9,
+
+                    club: "Everton".to_string(),
+                },
             },
             players: vec![
                 Player {
                     id: 287,
                     name: "Jordan Pickford".to_string(),
                     price_in_millions: 7.5,
-                    club_id: 9,
-                    club: "Everton".to_string(),
+                    club: Club {
+                        club_id: 9,
+
+                        club: "Everton".to_string(),
+                    },
                 },
                 Player {
                     id: 291,
                     name: "James Tarkowski".to_string(),
                     price_in_millions: 10.5,
-                    club_id: 9,
-                    club: "Everton".to_string(),
+                    club: Club {
+                        club_id: 9,
+
+                        club: "Everton".to_string(),
+                    },
                 },
             ],
         };
@@ -669,114 +801,162 @@ mod tests {
                 id: 249,
                 name: "João Pedro Junqueira de Jesus".to_string(),
                 price_in_millions: 7.5,
-                club_id: 7,
-                club: "Chelsea".to_string(),
+                club: Club {
+                    club_id: 7,
+
+                    club: "Chelsea".to_string(),
+                },
             },
             players: vec![
                 Player {
                     id: 287,
                     name: "Jordan Pickford".to_string(),
                     price_in_millions: 5.5,
-                    club_id: 9,
-                    club: "Everton".to_string(),
+                    club: Club {
+                        club_id: 9,
+
+                        club: "Everton".to_string(),
+                    },
                 },
                 Player {
                     id: 145,
                     name: "Maxim De Cuyper".to_string(),
                     price_in_millions: 4.5,
-                    club_id: 6,
-                    club: "Brighton".to_string(),
+                    club: Club {
+                        club_id: 6,
+
+                        club: "Brighton".to_string(),
+                    },
                 },
                 Player {
                     id: 506,
                     name: "Murillo Costa dos Santos".to_string(),
                     price_in_millions: 5.5,
-                    club_id: 16,
-                    club: "Nott'm Forest".to_string(),
+                    club: Club {
+                        club_id: 16,
+
+                        club: "Nott'm Forest".to_string(),
+                    },
                 },
                 Player {
                     id: 348,
                     name: "Joe Rodon".to_string(),
                     price_in_millions: 4.0,
-                    club_id: 11,
-                    club: "Leeds".to_string(),
+                    club: Club {
+                        club_id: 11,
+
+                        club: "Leeds".to_string(),
+                    },
                 },
                 Player {
                     id: 119,
                     name: "Bryan Mbeumo".to_string(),
                     price_in_millions: 8.0,
-                    club_id: 14,
-                    club: "Man Utd".to_string(),
+                    club: Club {
+                        club_id: 14,
+
+                        club: "Man Utd".to_string(),
+                    },
                 },
                 Player {
                     id: 382,
                     name: "Florian Wirtz".to_string(),
                     price_in_millions: 8.5,
-                    club_id: 12,
-                    club: "Liverpool".to_string(),
+                    club: Club {
+                        club_id: 12,
+
+                        club: "Liverpool".to_string(),
+                    },
                 },
                 Player {
                     id: 413,
                     name: "Omar Marmoush".to_string(),
                     price_in_millions: 8.4,
-                    club_id: 13,
-                    club: "Man City".to_string(),
+                    club: Club {
+                        club_id: 13,
+
+                        club: "Man City".to_string(),
+                    },
                 },
                 Player {
                     id: 582,
                     name: "Mohammed Kudus".to_string(),
                     price_in_millions: 6.5,
-                    club_id: 18,
-                    club: "Spurs".to_string(),
+                    club: Club {
+                        club_id: 18,
+
+                        club: "Spurs".to_string(),
+                    },
                 },
                 Player {
                     id: 666,
                     name: "Viktor Gyökeres".to_string(),
                     price_in_millions: 9.0,
-                    club_id: 1,
-                    club: "Arsenal".to_string(),
+                    club: Club {
+                        club_id: 1,
+
+                        club: "Arsenal".to_string(),
+                    },
                 },
                 Player {
                     id: 249,
                     name: "João Pedro Junqueira de Jesus".to_string(),
                     price_in_millions: 7.5,
-                    club_id: 7,
-                    club: "Chelsea".to_string(),
+                    club: Club {
+                        club_id: 7,
+
+                        club: "Chelsea".to_string(),
+                    },
                 },
                 Player {
                     id: 624,
                     name: "Jarrod Bowen".to_string(),
                     price_in_millions: 8.0,
-                    club_id: 19,
-                    club: "West Ham".to_string(),
+                    club: Club {
+                        club_id: 19,
+
+                        club: "West Ham".to_string(),
+                    },
                 },
                 Player {
                     id: 470,
                     name: "Martin Dúbravka".to_string(),
                     price_in_millions: 4.0,
-                    club_id: 3,
-                    club: "Burnley".to_string(),
+                    club: Club {
+                        club_id: 3,
+
+                        club: "Burnley".to_string(),
+                    },
                 },
                 Player {
                     id: 486,
                     name: "Anthony Elanga".to_string(),
                     price_in_millions: 7.0,
-                    club_id: 15,
-                    club: "Newcastle".to_string(),
+                    club: Club {
+                        club_id: 15,
+
+                        club: "Newcastle".to_string(),
+                    },
                 },
                 Player {
                     id: 541,
                     name: "Reinildo Mandava".to_string(),
                     price_in_millions: 4.0,
-                    club_id: 17,
-                    club: "Sunderland".to_string(),
+                    club: Club {
+                        club_id: 17,
+
+                        club: "Sunderland".to_string(),
+                    },
                 },
                 Player {
                     id: 256,
                     name: "Daniel Muñoz Mejía".to_string(),
                     price_in_millions: 5.5,
-                    club_id: 8,
-                    club: "Crystal Palace".to_string(),
+                    club: Club {
+                        club_id: 8,
+
+                        club: "Crystal Palace".to_string(),
+                    },
                 },
             ],
         };
@@ -800,37 +980,52 @@ mod tests {
                 id: 287,
                 name: "Jordan Pickford".to_string(),
                 price_in_millions: 7.5,
-                club_id: 9,
-                club: "Everton".to_string(),
+                club: Club {
+                    club_id: 9,
+
+                    club: "Everton".to_string(),
+                },
             },
             players: vec![
                 Player {
                     id: 287,
                     name: "Jordan Pickford".to_string(),
                     price_in_millions: 7.5,
-                    club_id: 9,
-                    club: "Everton".to_string(),
+                    club: Club {
+                        club_id: 9,
+
+                        club: "Everton".to_string(),
+                    },
                 },
                 Player {
                     id: 291,
                     name: "James Tarkowski".to_string(),
                     price_in_millions: 10.5,
-                    club_id: 9,
-                    club: "Everton".to_string(),
+                    club: Club {
+                        club_id: 9,
+
+                        club: "Everton".to_string(),
+                    },
                 },
                 Player {
                     id: 348,
                     name: "Joe Rodon".to_string(),
                     price_in_millions: 4.0,
-                    club_id: 11,
-                    club: "Leeds".to_string(),
+                    club: Club {
+                        club_id: 11,
+
+                        club: "Leeds".to_string(),
+                    },
                 },
                 Player {
                     id: 541,
                     name: "Reinildo Mandava".to_string(),
                     price_in_millions: 4.0,
-                    club_id: 17,
-                    club: "Sunderland".to_string(),
+                    club: Club {
+                        club_id: 17,
+
+                        club: "Sunderland".to_string(),
+                    },
                 },
             ],
         };
@@ -856,114 +1051,162 @@ mod tests {
                 id: 249,
                 name: "João Pedro Junqueira de Jesus".to_string(),
                 price_in_millions: 7.5,
-                club_id: 7,
-                club: "Chelsea".to_string(),
+                club: Club {
+                    club_id: 7,
+
+                    club: "Chelsea".to_string(),
+                },
             },
             players: vec![
                 Player {
                     id: 287,
                     name: "Jordan Pickford".to_string(),
                     price_in_millions: 5.5,
-                    club_id: 9,
-                    club: "Everton".to_string(),
+                    club: Club {
+                        club_id: 9,
+
+                        club: "Everton".to_string(),
+                    },
                 },
                 Player {
                     id: 145,
                     name: "Maxim De Cuyper".to_string(),
                     price_in_millions: 4.5,
-                    club_id: 6,
-                    club: "Brighton".to_string(),
+                    club: Club {
+                        club_id: 6,
+
+                        club: "Brighton".to_string(),
+                    },
                 },
                 Player {
                     id: 506,
                     name: "Murillo Costa dos Santos".to_string(),
                     price_in_millions: 5.5,
-                    club_id: 16,
-                    club: "Nott'm Forest".to_string(),
+                    club: Club {
+                        club_id: 16,
+
+                        club: "Nott'm Forest".to_string(),
+                    },
                 },
                 Player {
                     id: 348,
                     name: "Joe Rodon".to_string(),
                     price_in_millions: 4.0,
-                    club_id: 11,
-                    club: "Leeds".to_string(),
+                    club: Club {
+                        club_id: 11,
+
+                        club: "Leeds".to_string(),
+                    },
                 },
                 Player {
                     id: 119,
                     name: "Bryan Mbeumo".to_string(),
                     price_in_millions: 8.0,
-                    club_id: 14,
-                    club: "Man Utd".to_string(),
+                    club: Club {
+                        club_id: 14,
+
+                        club: "Man Utd".to_string(),
+                    },
                 },
                 Player {
                     id: 382,
                     name: "Florian Wirtz".to_string(),
                     price_in_millions: 8.5,
-                    club_id: 12,
-                    club: "Liverpool".to_string(),
+                    club: Club {
+                        club_id: 12,
+
+                        club: "Liverpool".to_string(),
+                    },
                 },
                 Player {
                     id: 413,
                     name: "Omar Marmoush".to_string(),
                     price_in_millions: 8.4,
-                    club_id: 13,
-                    club: "Man City".to_string(),
+                    club: Club {
+                        club_id: 13,
+
+                        club: "Man City".to_string(),
+                    },
                 },
                 Player {
                     id: 582,
                     name: "Mohammed Kudus".to_string(),
                     price_in_millions: 6.5,
-                    club_id: 18,
-                    club: "Spurs".to_string(),
+                    club: Club {
+                        club_id: 18,
+
+                        club: "Spurs".to_string(),
+                    },
                 },
                 Player {
                     id: 666,
                     name: "Viktor Gyökeres".to_string(),
                     price_in_millions: 9.0,
-                    club_id: 1,
-                    club: "Arsenal".to_string(),
+                    club: Club {
+                        club_id: 1,
+
+                        club: "Arsenal".to_string(),
+                    },
                 },
                 Player {
                     id: 249,
                     name: "João Pedro Junqueira de Jesus".to_string(),
                     price_in_millions: 7.5,
-                    club_id: 7,
-                    club: "Chelsea".to_string(),
+                    club: Club {
+                        club_id: 7,
+
+                        club: "Chelsea".to_string(),
+                    },
                 },
                 Player {
                     id: 624,
                     name: "Jarrod Bowen".to_string(),
                     price_in_millions: 8.0,
-                    club_id: 19,
-                    club: "West Ham".to_string(),
+                    club: Club {
+                        club_id: 19,
+
+                        club: "West Ham".to_string(),
+                    },
                 },
                 Player {
                     id: 470,
                     name: "Martin Dúbravka".to_string(),
                     price_in_millions: 4.0,
-                    club_id: 3,
-                    club: "Burnley".to_string(),
+                    club: Club {
+                        club_id: 3,
+
+                        club: "Burnley".to_string(),
+                    },
                 },
                 Player {
                     id: 486,
                     name: "Anthony Elanga".to_string(),
                     price_in_millions: 7.0,
-                    club_id: 15,
-                    club: "Newcastle".to_string(),
+                    club: Club {
+                        club_id: 15,
+
+                        club: "Newcastle".to_string(),
+                    },
                 },
                 Player {
                     id: 541,
                     name: "Reinildo Mandava".to_string(),
                     price_in_millions: 4.0,
-                    club_id: 17,
-                    club: "Sunderland".to_string(),
+                    club: Club {
+                        club_id: 17,
+
+                        club: "Sunderland".to_string(),
+                    },
                 },
                 Player {
                     id: 256,
                     name: "Daniel Muñoz Mejía".to_string(),
                     price_in_millions: 5.5,
-                    club_id: 8,
-                    club: "Crystal Palace".to_string(),
+                    club: Club {
+                        club_id: 8,
+
+                        club: "Crystal Palace".to_string(),
+                    },
                 },
             ],
         };

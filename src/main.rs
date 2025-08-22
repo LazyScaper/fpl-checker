@@ -46,8 +46,8 @@ struct ValidationResult {
 
 #[derive(Debug, PartialEq, Clone, Default)]
 struct Club {
-    club_id: i64,
-    club: String,
+    id: i64,
+    name: String,
 }
 
 #[derive(Debug, PartialEq, Clone, Default)]
@@ -60,8 +60,8 @@ struct Player {
 
 #[derive(Debug, PartialEq, Clone)]
 struct Team {
-    team_id: i64,
-    team_name: String,
+    id: i64,
+    name: String,
     owner: String,
     captain: Player,
     players: Vec<Player>,
@@ -85,32 +85,32 @@ struct FplTeamInfo {
 //     let picked_players: PickDataWrapper = serde_json::from_str(&picked_players).unwrap();
 //     picked_players
 
-fn build_teams_by_team_id(bootstrap_data: &str) -> HashMap<i64, String> {
+fn build_clubs_by_club_id(bootstrap_data: &str) -> HashMap<i64, String> {
     let bootstrap_data: Value = from_str(bootstrap_data).unwrap();
-    let mut teams_by_id: HashMap<i64, String> = HashMap::new();
+    let mut clubs_by_id: HashMap<i64, String> = HashMap::new();
 
-    if let Some(Value::Array(teams)) = bootstrap_data.get("teams") {
-        for team in teams {
-            if let Value::Object(team_obj) = team {
-                let team_id = match { team_obj.get("id").and_then(|v| v.as_i64()) } {
+    if let Some(Value::Array(clubs)) = bootstrap_data.get("teams") {
+        for club in clubs {
+            if let Value::Object(club_obj) = club {
+                let club_id = match { club_obj.get("id").and_then(|v| v.as_i64()) } {
                     None => panic!("id should be an integer"),
                     Some(id) => id,
                 };
-                let team_name = match { team_obj.get("name") } {
-                    Some(Value::String(first_name)) => first_name.to_string(),
-                    _ => panic!("team_obj does not have name"),
+                let club_name = match { club_obj.get("name") } {
+                    Some(Value::String(name)) => name.to_string(),
+                    _ => panic!("club_obj does not have name"),
                 };
 
-                teams_by_id.insert(team_id, team_name);
+                clubs_by_id.insert(club_id, club_name);
             }
         }
     }
 
-    teams_by_id
+    clubs_by_id
 }
 
 fn build_players_by_id(
-    teams_by_team_id: &HashMap<i64, String>,
+    clubs_by_club_id: &HashMap<i64, String>,
     bootstrap_data: &str,
 ) -> HashMap<i64, Player> {
     let bootstrap_data: Value = from_str(bootstrap_data).unwrap();
@@ -123,7 +123,7 @@ fn build_players_by_id(
                     None => panic!("id should be an integer"),
                     Some(id) => id,
                 };
-                let team_id = match { element_obj.get("team").and_then(|v| v.as_i64()) } {
+                let club_id = match { element_obj.get("team").and_then(|v| v.as_i64()) } {
                     None => panic!("team should be an integer"),
                     Some(team) => team,
                 };
@@ -146,8 +146,8 @@ fn build_players_by_id(
                     name: format!("{} {}", first_name, second_name),
                     price_in_millions,
                     club: Club {
-                        club_id: team_id,
-                        club: match { teams_by_team_id.get(&team_id) } {
+                        id: club_id,
+                        name: match { clubs_by_club_id.get(&club_id) } {
                             Some(team_name) => team_name.to_string(),
                             _ => {
                                 panic!("Could not find a team")
@@ -202,8 +202,8 @@ fn build_team(
                     name: players_by_player_id.get(&id).unwrap().name.clone(),
                     price_in_millions: players_by_player_id.get(&id).unwrap().price_in_millions,
                     club: Club {
-                        club_id: players_by_player_id.get(&id).unwrap().club.club_id,
-                        club: players_by_player_id.get(&id).unwrap().club.club.to_string(),
+                        id: players_by_player_id.get(&id).unwrap().club.id,
+                        name: players_by_player_id.get(&id).unwrap().club.name.to_string(),
                     },
                 };
 
@@ -219,8 +219,8 @@ fn build_team(
     }
 
     Team {
-        team_id: team_id,
-        team_name: team_name.to_string(),
+        id: team_id,
+        name: team_name.to_string(),
         owner: format!("{} {}", owner_first_name, owner_last_name),
         captain,
         players,
@@ -256,16 +256,16 @@ fn team_contains_at_most_one_player_per_club(team: Team) -> ValidationResult {
     let mut seen_players_by_club_id: HashMap<i64, Player> = HashMap::new();
 
     for player in team.players {
-        if seen_players_by_club_id.contains_key(&player.club.club_id) {
+        if seen_players_by_club_id.contains_key(&player.club.id) {
             return ValidationResult {
                 is_valid: false,
                 reason: format!(
                     "{} has shat the bed. {} contains more than 1 player from {} ({} and {})",
                     &team.owner,
-                    &team.team_name,
-                    &player.club.club,
+                    &team.name,
+                    &player.club.name,
                     seen_players_by_club_id
-                        .get(&player.club.club_id)
+                        .get(&player.club.id)
                         .unwrap()
                         .name,
                     player.name
@@ -273,7 +273,7 @@ fn team_contains_at_most_one_player_per_club(team: Team) -> ValidationResult {
             };
         }
 
-        seen_players_by_club_id.insert(player.club.club_id, player);
+        seen_players_by_club_id.insert(player.club.id, player);
     }
 
     ValidationResult {
@@ -283,21 +283,21 @@ fn team_contains_at_most_one_player_per_club(team: Team) -> ValidationResult {
 }
 
 fn team_contains_players_from_newly_promoted_clubs(
-    teams_by_team_id: HashMap<i64, String>,
+    clubs_by_club_id: HashMap<i64, String>,
     team: Team,
 ) -> ValidationResult {
     for club_id in NEWLY_PROMOTED_CLUBS {
         if !team
             .players
             .iter()
-            .any(|player| player.club.club_id == club_id)
+            .any(|player| player.club.id == club_id)
         {
             return ValidationResult {
                 is_valid: false,
                 reason: format!(
                     "Yikes! {} has not included players from {}. That's gonna sting",
                     team.owner,
-                    teams_by_team_id.get(&club_id).unwrap()
+                    clubs_by_club_id.get(&club_id).unwrap()
                 ),
             };
         }
@@ -319,8 +319,8 @@ mod tests {
     const PICKS_JSON: &str = include_str!("../tests/samples/picks.json");
 
     #[test]
-    fn should_build_teams_by_team_id_from_bootstrap_data() {
-        let actual = build_teams_by_team_id(BOOTSTRAP_JSON);
+    fn should_build_clubs_by_club_id_from_bootstrap_data() {
+        let actual = build_clubs_by_club_id(BOOTSTRAP_JSON);
 
         assert_eq!(Some(&"Arsenal".to_string()), actual.get(&1));
         assert_eq!(Some(&"Burnley".to_string()), actual.get(&3));
@@ -335,13 +335,13 @@ mod tests {
             name: "João Pedro Junqueira de Jesus".to_string(),
             price_in_millions: 7.5,
             club: Club {
-                club_id: 7,
-                club: "Chelsea".to_string(),
+                id: 7,
+                name: "Chelsea".to_string(),
             },
         };
 
-        let teams_by_team_id = build_teams_by_team_id(BOOTSTRAP_JSON);
-        let actual = build_players_by_id(&teams_by_team_id, BOOTSTRAP_JSON);
+        let clubs_by_club_id = build_clubs_by_club_id(BOOTSTRAP_JSON);
+        let actual = build_players_by_id(&clubs_by_club_id, BOOTSTRAP_JSON);
 
         assert_eq!(Some(&partial_expected), actual.get(&partial_expected.id));
     }
@@ -349,16 +349,16 @@ mod tests {
     #[test]
     fn should_build_team_from_data() {
         let expected = Team {
-            team_id: 2239760,
-            team_name: "Pedro Cask Ale".to_string(),
+            id: 2239760,
+            name: "Pedro Cask Ale".to_string(),
             owner: "Jake Peters".to_string(),
             captain: Player {
                 id: 249,
                 name: "João Pedro Junqueira de Jesus".to_string(),
                 price_in_millions: 7.5,
                 club: Club {
-                    club_id: 7,
-                    club: "Chelsea".to_string(),
+                    id: 7,
+                    name: "Chelsea".to_string(),
                 },
             },
             players: vec![
@@ -367,9 +367,9 @@ mod tests {
                     name: "Jordan Pickford".to_string(),
                     price_in_millions: 5.5,
                     club: Club {
-                        club_id: 9,
+                        id: 9,
 
-                        club: "Everton".to_string(),
+                        name: "Everton".to_string(),
                     },
                 },
                 Player {
@@ -377,9 +377,9 @@ mod tests {
                     name: "Maxim De Cuyper".to_string(),
                     price_in_millions: 4.5,
                     club: Club {
-                        club_id: 6,
+                        id: 6,
 
-                        club: "Brighton".to_string(),
+                        name: "Brighton".to_string(),
                     },
                 },
                 Player {
@@ -387,9 +387,9 @@ mod tests {
                     name: "Murillo Costa dos Santos".to_string(),
                     price_in_millions: 5.5,
                     club: Club {
-                        club_id: 16,
+                        id: 16,
 
-                        club: "Nott'm Forest".to_string(),
+                        name: "Nott'm Forest".to_string(),
                     },
                 },
                 Player {
@@ -397,9 +397,9 @@ mod tests {
                     name: "Joe Rodon".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
-                        club_id: 11,
+                        id: 11,
 
-                        club: "Leeds".to_string(),
+                        name: "Leeds".to_string(),
                     },
                 },
                 Player {
@@ -407,9 +407,9 @@ mod tests {
                     name: "Bryan Mbeumo".to_string(),
                     price_in_millions: 8.0,
                     club: Club {
-                        club_id: 14,
+                        id: 14,
 
-                        club: "Man Utd".to_string(),
+                        name: "Man Utd".to_string(),
                     },
                 },
                 Player {
@@ -417,9 +417,9 @@ mod tests {
                     name: "Florian Wirtz".to_string(),
                     price_in_millions: 8.5,
                     club: Club {
-                        club_id: 12,
+                        id: 12,
 
-                        club: "Liverpool".to_string(),
+                        name: "Liverpool".to_string(),
                     },
                 },
                 Player {
@@ -427,9 +427,9 @@ mod tests {
                     name: "Omar Marmoush".to_string(),
                     price_in_millions: 8.5,
                     club: Club {
-                        club_id: 13,
+                        id: 13,
 
-                        club: "Man City".to_string(),
+                        name: "Man City".to_string(),
                     },
                 },
                 Player {
@@ -437,9 +437,9 @@ mod tests {
                     name: "Mohammed Kudus".to_string(),
                     price_in_millions: 6.5,
                     club: Club {
-                        club_id: 18,
+                        id: 18,
 
-                        club: "Spurs".to_string(),
+                        name: "Spurs".to_string(),
                     },
                 },
                 Player {
@@ -447,9 +447,9 @@ mod tests {
                     name: "Viktor Gyökeres".to_string(),
                     price_in_millions: 9.0,
                     club: Club {
-                        club_id: 1,
+                        id: 1,
 
-                        club: "Arsenal".to_string(),
+                        name: "Arsenal".to_string(),
                     },
                 },
                 Player {
@@ -457,9 +457,9 @@ mod tests {
                     name: "João Pedro Junqueira de Jesus".to_string(),
                     price_in_millions: 7.5,
                     club: Club {
-                        club_id: 7,
+                        id: 7,
 
-                        club: "Chelsea".to_string(),
+                        name: "Chelsea".to_string(),
                     },
                 },
                 Player {
@@ -467,9 +467,9 @@ mod tests {
                     name: "Jarrod Bowen".to_string(),
                     price_in_millions: 8.0,
                     club: Club {
-                        club_id: 19,
+                        id: 19,
 
-                        club: "West Ham".to_string(),
+                        name: "West Ham".to_string(),
                     },
                 },
                 Player {
@@ -477,9 +477,9 @@ mod tests {
                     name: "Martin Dúbravka".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
-                        club_id: 3,
+                        id: 3,
 
-                        club: "Burnley".to_string(),
+                        name: "Burnley".to_string(),
                     },
                 },
                 Player {
@@ -487,9 +487,9 @@ mod tests {
                     name: "Anthony Elanga".to_string(),
                     price_in_millions: 7.0,
                     club: Club {
-                        club_id: 15,
+                        id: 15,
 
-                        club: "Newcastle".to_string(),
+                        name: "Newcastle".to_string(),
                     },
                 },
                 Player {
@@ -497,9 +497,9 @@ mod tests {
                     name: "Reinildo Mandava".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
-                        club_id: 17,
+                        id: 17,
 
-                        club: "Sunderland".to_string(),
+                        name: "Sunderland".to_string(),
                     },
                 },
                 Player {
@@ -507,15 +507,15 @@ mod tests {
                     name: "Daniel Muñoz Mejía".to_string(),
                     price_in_millions: 5.5,
                     club: Club {
-                        club_id: 8,
+                        id: 8,
 
-                        club: "Crystal Palace".to_string(),
+                        name: "Crystal Palace".to_string(),
                     },
                 },
             ],
         };
-        let teams_by_team_id = build_teams_by_team_id(BOOTSTRAP_JSON);
-        let players_by_player_id = build_players_by_id(&teams_by_team_id.clone(), BOOTSTRAP_JSON);
+        let clubs_by_club_id = build_clubs_by_club_id(BOOTSTRAP_JSON);
+        let players_by_player_id = build_players_by_id(&clubs_by_club_id.clone(), BOOTSTRAP_JSON);
         let actual = build_team(2239760, &players_by_player_id, PICKS_JSON, GAMEWEEK_JSON);
 
         assert_eq!(expected, actual);
@@ -524,17 +524,17 @@ mod tests {
     #[test]
     fn should_fail_if_team_has_more_than_one_player_from_a_club() {
         let team = Team {
-            team_id: 2239760,
-            team_name: "Pedro Cask Ale".to_string(),
+            id: 2239760,
+            name: "Pedro Cask Ale".to_string(),
             owner: "Jake Peters".to_string(),
             captain: Player {
                 id: 287,
                 name: "Jordan Pickford".to_string(),
                 price_in_millions: 7.5,
                 club: Club {
-                    club_id: 9,
+                    id: 9,
 
-                    club: "Everton".to_string(),
+                    name: "Everton".to_string(),
                 },
             },
             players: vec![
@@ -543,9 +543,9 @@ mod tests {
                     name: "Jordan Pickford".to_string(),
                     price_in_millions: 7.5,
                     club: Club {
-                        club_id: 9,
+                        id: 9,
 
-                        club: "Everton".to_string(),
+                        name: "Everton".to_string(),
                     },
                 },
                 Player {
@@ -553,9 +553,9 @@ mod tests {
                     name: "James Tarkowski".to_string(),
                     price_in_millions: 5.5,
                     club: Club {
-                        club_id: 9,
+                        id: 9,
 
-                        club: "Everton".to_string(),
+                        name: "Everton".to_string(),
                     },
                 },
             ],
@@ -570,17 +570,17 @@ mod tests {
     #[test]
     fn should_pass_if_team_does_not_have_more_than_one_player_from_a_club() {
         let team = Team {
-            team_id: 2239760,
-            team_name: "Pedro Cask Ale".to_string(),
+            id: 2239760,
+            name: "Pedro Cask Ale".to_string(),
             owner: "Jake Peters".to_string(),
             captain: Player {
                 id: 249,
                 name: "João Pedro Junqueira de Jesus".to_string(),
                 price_in_millions: 7.5,
                 club: Club {
-                    club_id: 7,
+                    id: 7,
 
-                    club: "Chelsea".to_string(),
+                    name: "Chelsea".to_string(),
                 },
             },
             players: vec![
@@ -589,9 +589,9 @@ mod tests {
                     name: "Jordan Pickford".to_string(),
                     price_in_millions: 5.5,
                     club: Club {
-                        club_id: 9,
+                        id: 9,
 
-                        club: "Everton".to_string(),
+                        name: "Everton".to_string(),
                     },
                 },
                 Player {
@@ -599,9 +599,9 @@ mod tests {
                     name: "Maxim De Cuyper".to_string(),
                     price_in_millions: 4.5,
                     club: Club {
-                        club_id: 6,
+                        id: 6,
 
-                        club: "Brighton".to_string(),
+                        name: "Brighton".to_string(),
                     },
                 },
                 Player {
@@ -609,9 +609,9 @@ mod tests {
                     name: "Murillo Costa dos Santos".to_string(),
                     price_in_millions: 5.5,
                     club: Club {
-                        club_id: 16,
+                        id: 16,
 
-                        club: "Nott'm Forest".to_string(),
+                        name: "Nott'm Forest".to_string(),
                     },
                 },
                 Player {
@@ -619,9 +619,9 @@ mod tests {
                     name: "Joe Rodon".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
-                        club_id: 11,
+                        id: 11,
 
-                        club: "Leeds".to_string(),
+                        name: "Leeds".to_string(),
                     },
                 },
                 Player {
@@ -629,9 +629,9 @@ mod tests {
                     name: "Bryan Mbeumo".to_string(),
                     price_in_millions: 8.0,
                     club: Club {
-                        club_id: 14,
+                        id: 14,
 
-                        club: "Man Utd".to_string(),
+                        name: "Man Utd".to_string(),
                     },
                 },
                 Player {
@@ -639,9 +639,9 @@ mod tests {
                     name: "Florian Wirtz".to_string(),
                     price_in_millions: 8.5,
                     club: Club {
-                        club_id: 12,
+                        id: 12,
 
-                        club: "Liverpool".to_string(),
+                        name: "Liverpool".to_string(),
                     },
                 },
                 Player {
@@ -649,9 +649,9 @@ mod tests {
                     name: "Omar Marmoush".to_string(),
                     price_in_millions: 8.4,
                     club: Club {
-                        club_id: 13,
+                        id: 13,
 
-                        club: "Man City".to_string(),
+                        name: "Man City".to_string(),
                     },
                 },
                 Player {
@@ -659,9 +659,9 @@ mod tests {
                     name: "Mohammed Kudus".to_string(),
                     price_in_millions: 6.5,
                     club: Club {
-                        club_id: 18,
+                        id: 18,
 
-                        club: "Spurs".to_string(),
+                        name: "Spurs".to_string(),
                     },
                 },
                 Player {
@@ -669,9 +669,9 @@ mod tests {
                     name: "Viktor Gyökeres".to_string(),
                     price_in_millions: 9.0,
                     club: Club {
-                        club_id: 1,
+                        id: 1,
 
-                        club: "Arsenal".to_string(),
+                        name: "Arsenal".to_string(),
                     },
                 },
                 Player {
@@ -679,9 +679,9 @@ mod tests {
                     name: "João Pedro Junqueira de Jesus".to_string(),
                     price_in_millions: 7.5,
                     club: Club {
-                        club_id: 7,
+                        id: 7,
 
-                        club: "Chelsea".to_string(),
+                        name: "Chelsea".to_string(),
                     },
                 },
                 Player {
@@ -689,9 +689,9 @@ mod tests {
                     name: "Jarrod Bowen".to_string(),
                     price_in_millions: 8.0,
                     club: Club {
-                        club_id: 19,
+                        id: 19,
 
-                        club: "West Ham".to_string(),
+                        name: "West Ham".to_string(),
                     },
                 },
                 Player {
@@ -699,9 +699,9 @@ mod tests {
                     name: "Martin Dúbravka".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
-                        club_id: 3,
+                        id: 3,
 
-                        club: "Burnley".to_string(),
+                        name: "Burnley".to_string(),
                     },
                 },
                 Player {
@@ -709,9 +709,9 @@ mod tests {
                     name: "Anthony Elanga".to_string(),
                     price_in_millions: 7.0,
                     club: Club {
-                        club_id: 15,
+                        id: 15,
 
-                        club: "Newcastle".to_string(),
+                        name: "Newcastle".to_string(),
                     },
                 },
                 Player {
@@ -719,9 +719,9 @@ mod tests {
                     name: "Reinildo Mandava".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
-                        club_id: 17,
+                        id: 17,
 
-                        club: "Sunderland".to_string(),
+                        name: "Sunderland".to_string(),
                     },
                 },
                 Player {
@@ -729,9 +729,9 @@ mod tests {
                     name: "Daniel Muñoz Mejía".to_string(),
                     price_in_millions: 5.5,
                     club: Club {
-                        club_id: 8,
+                        id: 8,
 
-                        club: "Crystal Palace".to_string(),
+                        name: "Crystal Palace".to_string(),
                     },
                 },
             ],
@@ -749,17 +749,17 @@ mod tests {
     #[test]
     fn should_fail_if_team_has_player_above_price_limit() {
         let team = Team {
-            team_id: 2239760,
-            team_name: "Pedro Cask Ale".to_string(),
+            id: 2239760,
+            name: "Pedro Cask Ale".to_string(),
             owner: "Jake Peters".to_string(),
             captain: Player {
                 id: 287,
                 name: "Jordan Pickford".to_string(),
                 price_in_millions: 7.5,
                 club: Club {
-                    club_id: 9,
+                    id: 9,
 
-                    club: "Everton".to_string(),
+                    name: "Everton".to_string(),
                 },
             },
             players: vec![
@@ -768,9 +768,9 @@ mod tests {
                     name: "Jordan Pickford".to_string(),
                     price_in_millions: 7.5,
                     club: Club {
-                        club_id: 9,
+                        id: 9,
 
-                        club: "Everton".to_string(),
+                        name: "Everton".to_string(),
                     },
                 },
                 Player {
@@ -778,9 +778,9 @@ mod tests {
                     name: "James Tarkowski".to_string(),
                     price_in_millions: 10.5,
                     club: Club {
-                        club_id: 9,
+                        id: 9,
 
-                        club: "Everton".to_string(),
+                        name: "Everton".to_string(),
                     },
                 },
             ],
@@ -794,17 +794,17 @@ mod tests {
     #[test]
     fn should_pass_if_team_has_players_under_price_limit() {
         let team = Team {
-            team_id: 2239760,
-            team_name: "Pedro Cask Ale".to_string(),
+            id: 2239760,
+            name: "Pedro Cask Ale".to_string(),
             owner: "Jake Peters".to_string(),
             captain: Player {
                 id: 249,
                 name: "João Pedro Junqueira de Jesus".to_string(),
                 price_in_millions: 7.5,
                 club: Club {
-                    club_id: 7,
+                    id: 7,
 
-                    club: "Chelsea".to_string(),
+                    name: "Chelsea".to_string(),
                 },
             },
             players: vec![
@@ -813,9 +813,9 @@ mod tests {
                     name: "Jordan Pickford".to_string(),
                     price_in_millions: 5.5,
                     club: Club {
-                        club_id: 9,
+                        id: 9,
 
-                        club: "Everton".to_string(),
+                        name: "Everton".to_string(),
                     },
                 },
                 Player {
@@ -823,9 +823,9 @@ mod tests {
                     name: "Maxim De Cuyper".to_string(),
                     price_in_millions: 4.5,
                     club: Club {
-                        club_id: 6,
+                        id: 6,
 
-                        club: "Brighton".to_string(),
+                        name: "Brighton".to_string(),
                     },
                 },
                 Player {
@@ -833,9 +833,9 @@ mod tests {
                     name: "Murillo Costa dos Santos".to_string(),
                     price_in_millions: 5.5,
                     club: Club {
-                        club_id: 16,
+                        id: 16,
 
-                        club: "Nott'm Forest".to_string(),
+                        name: "Nott'm Forest".to_string(),
                     },
                 },
                 Player {
@@ -843,9 +843,9 @@ mod tests {
                     name: "Joe Rodon".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
-                        club_id: 11,
+                        id: 11,
 
-                        club: "Leeds".to_string(),
+                        name: "Leeds".to_string(),
                     },
                 },
                 Player {
@@ -853,9 +853,9 @@ mod tests {
                     name: "Bryan Mbeumo".to_string(),
                     price_in_millions: 8.0,
                     club: Club {
-                        club_id: 14,
+                        id: 14,
 
-                        club: "Man Utd".to_string(),
+                        name: "Man Utd".to_string(),
                     },
                 },
                 Player {
@@ -863,9 +863,9 @@ mod tests {
                     name: "Florian Wirtz".to_string(),
                     price_in_millions: 8.5,
                     club: Club {
-                        club_id: 12,
+                        id: 12,
 
-                        club: "Liverpool".to_string(),
+                        name: "Liverpool".to_string(),
                     },
                 },
                 Player {
@@ -873,9 +873,9 @@ mod tests {
                     name: "Omar Marmoush".to_string(),
                     price_in_millions: 8.4,
                     club: Club {
-                        club_id: 13,
+                        id: 13,
 
-                        club: "Man City".to_string(),
+                        name: "Man City".to_string(),
                     },
                 },
                 Player {
@@ -883,9 +883,9 @@ mod tests {
                     name: "Mohammed Kudus".to_string(),
                     price_in_millions: 6.5,
                     club: Club {
-                        club_id: 18,
+                        id: 18,
 
-                        club: "Spurs".to_string(),
+                        name: "Spurs".to_string(),
                     },
                 },
                 Player {
@@ -893,9 +893,9 @@ mod tests {
                     name: "Viktor Gyökeres".to_string(),
                     price_in_millions: 9.0,
                     club: Club {
-                        club_id: 1,
+                        id: 1,
 
-                        club: "Arsenal".to_string(),
+                        name: "Arsenal".to_string(),
                     },
                 },
                 Player {
@@ -903,9 +903,9 @@ mod tests {
                     name: "João Pedro Junqueira de Jesus".to_string(),
                     price_in_millions: 7.5,
                     club: Club {
-                        club_id: 7,
+                        id: 7,
 
-                        club: "Chelsea".to_string(),
+                        name: "Chelsea".to_string(),
                     },
                 },
                 Player {
@@ -913,9 +913,9 @@ mod tests {
                     name: "Jarrod Bowen".to_string(),
                     price_in_millions: 8.0,
                     club: Club {
-                        club_id: 19,
+                        id: 19,
 
-                        club: "West Ham".to_string(),
+                        name: "West Ham".to_string(),
                     },
                 },
                 Player {
@@ -923,9 +923,9 @@ mod tests {
                     name: "Martin Dúbravka".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
-                        club_id: 3,
+                        id: 3,
 
-                        club: "Burnley".to_string(),
+                        name: "Burnley".to_string(),
                     },
                 },
                 Player {
@@ -933,9 +933,9 @@ mod tests {
                     name: "Anthony Elanga".to_string(),
                     price_in_millions: 7.0,
                     club: Club {
-                        club_id: 15,
+                        id: 15,
 
-                        club: "Newcastle".to_string(),
+                        name: "Newcastle".to_string(),
                     },
                 },
                 Player {
@@ -943,9 +943,9 @@ mod tests {
                     name: "Reinildo Mandava".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
-                        club_id: 17,
+                        id: 17,
 
-                        club: "Sunderland".to_string(),
+                        name: "Sunderland".to_string(),
                     },
                 },
                 Player {
@@ -953,9 +953,9 @@ mod tests {
                     name: "Daniel Muñoz Mejía".to_string(),
                     price_in_millions: 5.5,
                     club: Club {
-                        club_id: 8,
+                        id: 8,
 
-                        club: "Crystal Palace".to_string(),
+                        name: "Crystal Palace".to_string(),
                     },
                 },
             ],
@@ -973,17 +973,17 @@ mod tests {
     #[test]
     fn should_fail_if_team_does_not_have_players_from_newly_promoted_clubs() {
         let team = Team {
-            team_id: 2239760,
-            team_name: "Pedro Cask Ale".to_string(),
+            id: 2239760,
+            name: "Pedro Cask Ale".to_string(),
             owner: "Jake Peters".to_string(),
             captain: Player {
                 id: 287,
                 name: "Jordan Pickford".to_string(),
                 price_in_millions: 7.5,
                 club: Club {
-                    club_id: 9,
+                    id: 9,
 
-                    club: "Everton".to_string(),
+                    name: "Everton".to_string(),
                 },
             },
             players: vec![
@@ -992,9 +992,9 @@ mod tests {
                     name: "Jordan Pickford".to_string(),
                     price_in_millions: 7.5,
                     club: Club {
-                        club_id: 9,
+                        id: 9,
 
-                        club: "Everton".to_string(),
+                        name: "Everton".to_string(),
                     },
                 },
                 Player {
@@ -1002,9 +1002,9 @@ mod tests {
                     name: "James Tarkowski".to_string(),
                     price_in_millions: 10.5,
                     club: Club {
-                        club_id: 9,
+                        id: 9,
 
-                        club: "Everton".to_string(),
+                        name: "Everton".to_string(),
                     },
                 },
                 Player {
@@ -1012,9 +1012,9 @@ mod tests {
                     name: "Joe Rodon".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
-                        club_id: 11,
+                        id: 11,
 
-                        club: "Leeds".to_string(),
+                        name: "Leeds".to_string(),
                     },
                 },
                 Player {
@@ -1022,16 +1022,16 @@ mod tests {
                     name: "Reinildo Mandava".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
-                        club_id: 17,
+                        id: 17,
 
-                        club: "Sunderland".to_string(),
+                        name: "Sunderland".to_string(),
                     },
                 },
             ],
         };
 
-        let teams_by_team_id = build_teams_by_team_id(BOOTSTRAP_JSON);
-        let actual = team_contains_players_from_newly_promoted_clubs(teams_by_team_id, team);
+        let clubs_by_club_id = build_clubs_by_club_id(BOOTSTRAP_JSON);
+        let actual = team_contains_players_from_newly_promoted_clubs(clubs_by_club_id, team);
         let expected = ValidationResult {
             is_valid: false,
             reason: "Yikes! Jake Peters has not included players from Burnley. That's gonna sting"
@@ -1044,17 +1044,17 @@ mod tests {
     #[test]
     fn should_pass_if_team_has_players_from_newly_promoted_clubs() {
         let team = Team {
-            team_id: 2239760,
-            team_name: "Pedro Cask Ale".to_string(),
+            id: 2239760,
+            name: "Pedro Cask Ale".to_string(),
             owner: "Jake Peters".to_string(),
             captain: Player {
                 id: 249,
                 name: "João Pedro Junqueira de Jesus".to_string(),
                 price_in_millions: 7.5,
                 club: Club {
-                    club_id: 7,
+                    id: 7,
 
-                    club: "Chelsea".to_string(),
+                    name: "Chelsea".to_string(),
                 },
             },
             players: vec![
@@ -1063,9 +1063,9 @@ mod tests {
                     name: "Jordan Pickford".to_string(),
                     price_in_millions: 5.5,
                     club: Club {
-                        club_id: 9,
+                        id: 9,
 
-                        club: "Everton".to_string(),
+                        name: "Everton".to_string(),
                     },
                 },
                 Player {
@@ -1073,9 +1073,9 @@ mod tests {
                     name: "Maxim De Cuyper".to_string(),
                     price_in_millions: 4.5,
                     club: Club {
-                        club_id: 6,
+                        id: 6,
 
-                        club: "Brighton".to_string(),
+                        name: "Brighton".to_string(),
                     },
                 },
                 Player {
@@ -1083,9 +1083,9 @@ mod tests {
                     name: "Murillo Costa dos Santos".to_string(),
                     price_in_millions: 5.5,
                     club: Club {
-                        club_id: 16,
+                        id: 16,
 
-                        club: "Nott'm Forest".to_string(),
+                        name: "Nott'm Forest".to_string(),
                     },
                 },
                 Player {
@@ -1093,9 +1093,9 @@ mod tests {
                     name: "Joe Rodon".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
-                        club_id: 11,
+                        id: 11,
 
-                        club: "Leeds".to_string(),
+                        name: "Leeds".to_string(),
                     },
                 },
                 Player {
@@ -1103,9 +1103,9 @@ mod tests {
                     name: "Bryan Mbeumo".to_string(),
                     price_in_millions: 8.0,
                     club: Club {
-                        club_id: 14,
+                        id: 14,
 
-                        club: "Man Utd".to_string(),
+                        name: "Man Utd".to_string(),
                     },
                 },
                 Player {
@@ -1113,9 +1113,9 @@ mod tests {
                     name: "Florian Wirtz".to_string(),
                     price_in_millions: 8.5,
                     club: Club {
-                        club_id: 12,
+                        id: 12,
 
-                        club: "Liverpool".to_string(),
+                        name: "Liverpool".to_string(),
                     },
                 },
                 Player {
@@ -1123,9 +1123,9 @@ mod tests {
                     name: "Omar Marmoush".to_string(),
                     price_in_millions: 8.4,
                     club: Club {
-                        club_id: 13,
+                        id: 13,
 
-                        club: "Man City".to_string(),
+                        name: "Man City".to_string(),
                     },
                 },
                 Player {
@@ -1133,9 +1133,9 @@ mod tests {
                     name: "Mohammed Kudus".to_string(),
                     price_in_millions: 6.5,
                     club: Club {
-                        club_id: 18,
+                        id: 18,
 
-                        club: "Spurs".to_string(),
+                        name: "Spurs".to_string(),
                     },
                 },
                 Player {
@@ -1143,9 +1143,9 @@ mod tests {
                     name: "Viktor Gyökeres".to_string(),
                     price_in_millions: 9.0,
                     club: Club {
-                        club_id: 1,
+                        id: 1,
 
-                        club: "Arsenal".to_string(),
+                        name: "Arsenal".to_string(),
                     },
                 },
                 Player {
@@ -1153,9 +1153,9 @@ mod tests {
                     name: "João Pedro Junqueira de Jesus".to_string(),
                     price_in_millions: 7.5,
                     club: Club {
-                        club_id: 7,
+                        id: 7,
 
-                        club: "Chelsea".to_string(),
+                        name: "Chelsea".to_string(),
                     },
                 },
                 Player {
@@ -1163,9 +1163,9 @@ mod tests {
                     name: "Jarrod Bowen".to_string(),
                     price_in_millions: 8.0,
                     club: Club {
-                        club_id: 19,
+                        id: 19,
 
-                        club: "West Ham".to_string(),
+                        name: "West Ham".to_string(),
                     },
                 },
                 Player {
@@ -1173,9 +1173,9 @@ mod tests {
                     name: "Martin Dúbravka".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
-                        club_id: 3,
+                        id: 3,
 
-                        club: "Burnley".to_string(),
+                        name: "Burnley".to_string(),
                     },
                 },
                 Player {
@@ -1183,9 +1183,9 @@ mod tests {
                     name: "Anthony Elanga".to_string(),
                     price_in_millions: 7.0,
                     club: Club {
-                        club_id: 15,
+                        id: 15,
 
-                        club: "Newcastle".to_string(),
+                        name: "Newcastle".to_string(),
                     },
                 },
                 Player {
@@ -1193,9 +1193,9 @@ mod tests {
                     name: "Reinildo Mandava".to_string(),
                     price_in_millions: 4.0,
                     club: Club {
-                        club_id: 17,
+                        id: 17,
 
-                        club: "Sunderland".to_string(),
+                        name: "Sunderland".to_string(),
                     },
                 },
                 Player {
@@ -1203,16 +1203,16 @@ mod tests {
                     name: "Daniel Muñoz Mejía".to_string(),
                     price_in_millions: 5.5,
                     club: Club {
-                        club_id: 8,
+                        id: 8,
 
-                        club: "Crystal Palace".to_string(),
+                        name: "Crystal Palace".to_string(),
                     },
                 },
             ],
         };
 
-        let teams_by_team_id = build_teams_by_team_id(BOOTSTRAP_JSON);
-        let actual = team_contains_players_from_newly_promoted_clubs(teams_by_team_id, team);
+        let clubs_by_club_id = build_clubs_by_club_id(BOOTSTRAP_JSON);
+        let actual = team_contains_players_from_newly_promoted_clubs(clubs_by_club_id, team);
         let expected = ValidationResult {
             is_valid: true,
             reason: "".to_string(),

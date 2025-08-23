@@ -1,0 +1,151 @@
+{
+  "id": 2239760,
+  "name": "Pedro Cask Ale",
+  "owner": "Jake",
+  "captain": {
+    "id": 249,
+    "name": "João Pedro",
+    "price_in_millions": 7.5,
+    "club": {
+      "id": 7,
+      "name": "Chelsea"
+    }
+  },
+  "players": [
+    {
+      "id": 287,
+      "name": "Pickford",
+      "price_in_millions": 5.5,
+      "club": {
+        "id": 9,
+        "name": "Everton"
+      }
+    },
+    {
+      "id": 145,
+      "name": "De Cuyper",
+      "price_in_millions": 4.5,
+      "club": {
+        "id": 6,
+        "name": "Brighton"
+      }
+    },
+    {
+      "id": 506,
+      "name": "Murillo",
+      "price_in_millions": 5.5,
+      "club": {
+        "id": 16,
+        "name": "Nott'm Forest"
+      }
+    },
+    {
+      "id": 348,
+      "name": "Rodon",
+      "price_in_millions": 4.0,
+      "club": {
+        "id": 11,
+        "name": "Leeds"
+      }
+    },
+    {
+      "id": 119,
+      "name": "Mbeumo",
+      "price_in_millions": 8.0,
+      "club": {
+        "id": 14,
+        "name": "Man Utd"
+      }
+    },
+    {
+      "id": 382,
+      "name": "Wirtz",
+      "price_in_millions": 8.5,
+      "club": {
+        "id": 12,
+        "name": "Liverpool"
+      }
+    },
+    {
+      "id": 413,
+      "name": "Marmoush",
+      "price_in_millions": 8.5,
+      "club": {
+        "id": 13,
+        "name": "Man City"
+      }
+    },
+    {
+      "id": 582,
+      "name": "Kudus",
+      "price_in_millions": 6.5,
+      "club": {
+        "id": 18,
+        "name": "Spurs"
+      }
+    },
+    {
+      "id": 666,
+      "name": "Gyökeres",
+      "price_in_millions": 9.0,
+      "club": {
+        "id": 1,
+        "name": "Arsenal"
+      }
+    },
+    {
+      "id": 249,
+      "name": "João Pedro",
+      "price_in_millions": 7.5,
+      "club": {
+        "id": 7,
+        "name": "Chelsea"
+      }
+    },
+    {
+      "id": 624,
+      "name": "Bowen",
+      "price_in_millions": 8.0,
+      "club": {
+        "id": 19,
+        "name": "West Ham"
+      }
+    },
+    {
+      "id": 470,
+      "name": "Dúbravka",
+      "price_in_millions": 4.0,
+      "club": {
+        "id": 3,
+        "name": "Burnley"
+      }
+    },
+    {
+      "id": 486,
+      "name": "Elanga",
+      "price_in_millions": 7.0,
+      "club": {
+        "id": 15,
+        "name": "Newcastle"
+      }
+    },
+    {
+      "id": 541,
+      "name": "Reinildo",
+      "price_in_millions": 4.0,
+      "club": {
+        "id": 17,
+        "name": "Sunderland"
+      }
+    },
+    {
+      "id": 256,
+      "name": "Muñoz",
+      "price_in_millions": 5.5,
+      "club": {
+        "id": 8,
+        "name": "Crystal Palace"
+      }
+    }
+  ]
+}

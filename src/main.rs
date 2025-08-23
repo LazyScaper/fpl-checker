@@ -3,35 +3,35 @@ use std::collections::HashMap;
 
 const PLAYER_AND_TEAM_IDS: [FplTeamInfo; 8] = [
     FplTeamInfo {
-        player_name: "Dan",
+        owner: "Dan",
         team_id: 396409,
     },
     FplTeamInfo {
-        player_name: "Jake",
+        owner: "Jake",
         team_id: 2239760,
     },
     FplTeamInfo {
-        player_name: "Jay",
+        owner: "Jay",
         team_id: 2186577,
     },
     FplTeamInfo {
-        player_name: "Shane",
+        owner: "Shane",
         team_id: 258293,
     },
     FplTeamInfo {
-        player_name: "Dylan",
+        owner: "Dylan",
         team_id: 761504,
     },
     FplTeamInfo {
-        player_name: "Harry",
+        owner: "Harry",
         team_id: 7718758,
     },
     FplTeamInfo {
-        player_name: "Josh",
+        owner: "Josh",
         team_id: 2242306,
     },
     FplTeamInfo {
-        player_name: "Ed",
+        owner: "Ed",
         team_id: 8828197,
     },
 ];
@@ -83,25 +83,11 @@ struct Team {
     players: Vec<Player>,
 }
 struct FplTeamInfo {
-    player_name: &'static str,
-    team_id: u32,
+    owner: &'static str,
+    team_id: i64,
 }
 
-//
-// fn fetch_picked_players(team: &FplTeamInfo) -> Value {
-//     let game_week: Response = ureq::get(&format!("https://fantasy.premierleague.com/api/entry/{}/", team.team_id))
-//         .call()
-//         .unwrap();
-//     let game_week: String = game_week.into_string().unwrap();
-//     let game_week: GameWeekData = serde_json::from_str(&game_week).unwrap();
-//     let picked_players: Response = ureq::get(&format!("https://fantasy.premierleague.com/api/entry/{}/event/{}/picks/", team.team_id, game_week.current_event))
-//         .call()
-//         .unwrap();
-//     let picked_players: String = picked_players.into_string().unwrap();
-//     let picked_players: PickDataWrapper = serde_json::from_str(&picked_players).unwrap();
-//     picked_players
-
-fn build_clubs_by_club_id(bootstrap_data: &str) -> HashMap<i64, String> {
+fn build_clubs_by_id(bootstrap_data: &str) -> HashMap<i64, String> {
     let bootstrap_data: Value = from_str(bootstrap_data).unwrap();
     let mut clubs_by_id: HashMap<i64, String> = HashMap::new();
 
@@ -178,6 +164,7 @@ fn build_players_by_id(
 
 fn build_team(
     team_id: i64,
+    owner: &str,
     players_by_player_id: &HashMap<i64, Player>,
     picks_data: &str,
     gameweek_data: &str,
@@ -188,14 +175,6 @@ fn build_team(
     let team_name = match { gameweek_data.get("name") } {
         Some(Value::String(team_name)) => team_name,
         _ => panic!("gameweek_data does not have team name"),
-    };
-    let owner_first_name = match { gameweek_data.get("player_first_name") } {
-        Some(Value::String(player_first_name)) => player_first_name,
-        _ => panic!("gameweek_data does not have player_first_name"),
-    };
-    let owner_last_name = match { gameweek_data.get("player_last_name") } {
-        Some(Value::String(player_last_name)) => player_last_name,
-        _ => panic!("gameweek_data does not have player_last_name"),
     };
 
     let mut players = Vec::new();
@@ -233,18 +212,18 @@ fn build_team(
     Team {
         id: team_id,
         name: team_name.to_string(),
-        owner: format!("{} {}", owner_first_name, owner_last_name),
+        owner: owner.to_string(),
         captain,
         players,
     }
 }
 
-fn team_contains_players_under_10_m(team: Team) -> ValidationResult {
+fn team_contains_players_under_10_m(team: &Team) -> ValidationResult {
     let mut players_above_price_threshold: HashMap<String, f64> = HashMap::new();
 
-    for player in team.players {
-        if (player.price_in_millions >= 10.0) {
-            players_above_price_threshold.insert(player.name, player.price_in_millions);
+    for player in &team.players {
+        if player.price_in_millions >= 10.0 {
+            players_above_price_threshold.insert(player.name.clone(), player.price_in_millions);
         }
     }
 
@@ -258,10 +237,10 @@ fn team_contains_players_under_10_m(team: Team) -> ValidationResult {
     ValidationResult::valid()
 }
 
-fn team_contains_at_most_one_player_per_club(team: Team) -> ValidationResult {
+fn team_contains_at_most_one_player_per_club(team: &Team) -> ValidationResult {
     let mut seen_players_by_club_id: HashMap<i64, Player> = HashMap::new();
 
-    for player in team.players {
+    for player in &team.players {
         if seen_players_by_club_id.contains_key(&player.club.id) {
             return ValidationResult::invalid(&format!(
                 "{} has shat the bed. {} contains more than 1 player from {} ({} and {})",
@@ -272,15 +251,15 @@ fn team_contains_at_most_one_player_per_club(team: Team) -> ValidationResult {
                 &player.name
             ));
         };
-        seen_players_by_club_id.insert(player.club.id, player);
+        seen_players_by_club_id.insert(player.club.id, player.clone());
     }
 
     ValidationResult::valid()
 }
 
 fn team_contains_players_from_newly_promoted_clubs(
-    clubs_by_club_id: HashMap<i64, String>,
-    team: Team,
+    clubs_by_club_id: &HashMap<i64, String>,
+    team: &Team,
 ) -> ValidationResult {
     for club_id in NEWLY_PROMOTED_CLUBS {
         if !team.players.iter().any(|player| player.club.id == club_id) {
@@ -295,8 +274,84 @@ fn team_contains_players_from_newly_promoted_clubs(
     ValidationResult::valid()
 }
 
-fn main() {}
+fn main() {
+    let bootstrap_data = ureq::get("https://fantasy.premierleague.com/api/bootstrap-static/")
+        .call()
+        .unwrap()
+        .into_body()
+        .read_to_string()
+        .unwrap();
 
+    let clubs_by_club_id = build_clubs_by_id(&bootstrap_data);
+    let players_by_id = build_players_by_id(&clubs_by_club_id, &bootstrap_data);
+
+    let mut rules_breakers: Vec<ValidationResult> = Vec::new();
+
+    for fpl_team in PLAYER_AND_TEAM_IDS {
+        let gameweek_data = ureq::get(&format!(
+            "https://fantasy.premierleague.com/api/entry/{}/",
+            fpl_team.team_id
+        ))
+        .call()
+        .unwrap()
+        .into_body()
+        .read_to_string()
+        .unwrap();
+
+        let gameweek_data_json: Value = from_str(&gameweek_data).unwrap();
+
+        let current_gameweek = match { gameweek_data_json.get("current_event") } {
+            Some(Value::Number(gw)) => gw,
+            _ => panic!("gameweek data does not have current_event"),
+        };
+
+        let picks_data = ureq::get(&format!(
+            "https://fantasy.premierleague.com/api/entry/{}/event/{}/picks/",
+            fpl_team.team_id, current_gameweek
+        ))
+        .call()
+        .unwrap()
+        .into_body()
+        .read_to_string()
+        .unwrap();
+
+        let team = build_team(
+            fpl_team.team_id,
+            fpl_team.owner,
+            &players_by_id,
+            &picks_data,
+            &gameweek_data,
+        );
+
+        let result = team_contains_players_under_10_m(&team);
+
+        if !result.is_valid {
+            rules_breakers.push(result);
+        }
+
+        let result = team_contains_players_from_newly_promoted_clubs(&clubs_by_club_id, &team);
+
+        if !result.is_valid {
+            rules_breakers.push(result);
+        }
+
+        let result = team_contains_at_most_one_player_per_club(&team);
+
+        if !result.is_valid {
+            rules_breakers.push(result);
+        }
+    }
+
+    if rules_breakers.is_empty() {
+        println!("No rules breakers found");
+    } else {
+        for rule_broken in rules_breakers {
+            println!("{}\n\n", rule_broken.reason)
+        }
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -306,7 +361,7 @@ mod tests {
 
     #[test]
     fn should_build_clubs_by_club_id_from_bootstrap_data() {
-        let actual = build_clubs_by_club_id(BOOTSTRAP_JSON);
+        let actual = build_clubs_by_id(BOOTSTRAP_JSON);
 
         assert_eq!(Some(&"Arsenal".to_string()), actual.get(&1));
         assert_eq!(Some(&"Burnley".to_string()), actual.get(&3));
@@ -326,7 +381,7 @@ mod tests {
             },
         };
 
-        let clubs_by_club_id = build_clubs_by_club_id(BOOTSTRAP_JSON);
+        let clubs_by_club_id = build_clubs_by_id(BOOTSTRAP_JSON);
         let actual = build_players_by_id(&clubs_by_club_id, BOOTSTRAP_JSON);
 
         assert_eq!(Some(&partial_expected), actual.get(&partial_expected.id));
@@ -337,7 +392,7 @@ mod tests {
         let expected = Team {
             id: 2239760,
             name: "Pedro Cask Ale".to_string(),
-            owner: "Jake Peters".to_string(),
+            owner: "Jake".to_string(),
             captain: Player {
                 id: 249,
                 name: "João Pedro".to_string(),
@@ -500,9 +555,15 @@ mod tests {
                 },
             ],
         };
-        let clubs_by_club_id = build_clubs_by_club_id(BOOTSTRAP_JSON);
+        let clubs_by_club_id = build_clubs_by_id(BOOTSTRAP_JSON);
         let players_by_player_id = build_players_by_id(&clubs_by_club_id.clone(), BOOTSTRAP_JSON);
-        let actual = build_team(2239760, &players_by_player_id, PICKS_JSON, GAMEWEEK_JSON);
+        let actual = build_team(
+            2239760,
+            "Jake",
+            &players_by_player_id,
+            PICKS_JSON,
+            GAMEWEEK_JSON,
+        );
 
         assert_eq!(expected, actual);
     }
@@ -547,7 +608,7 @@ mod tests {
             ],
         };
 
-        let actual = team_contains_at_most_one_player_per_club(team);
+        let actual = team_contains_at_most_one_player_per_club(&team);
         let expected = ValidationResult::invalid(
             "Jake Peters has shat the bed. Pedro Cask Ale contains more than 1 player from Everton (Pickford and James Tarkowski)",
         );
@@ -725,7 +786,7 @@ mod tests {
             ],
         };
 
-        let actual = team_contains_at_most_one_player_per_club(team);
+        let actual = team_contains_at_most_one_player_per_club(&team);
         let expected = ValidationResult::valid();
 
         assert_eq!(expected, actual)
@@ -771,13 +832,14 @@ mod tests {
             ],
         };
 
-        let actual = team_contains_players_under_10_m(team);
+        let actual = team_contains_players_under_10_m(&team);
         let expected = ValidationResult::invalid(
             "Big wompers! Jake Peters has James Tarkowski in their team. He is currently priced at 10.5m",
         );
 
         assert_eq!(expected, actual)
     }
+
     #[test]
     fn should_pass_if_team_has_players_under_price_limit() {
         let team = Team {
@@ -948,7 +1010,7 @@ mod tests {
             ],
         };
 
-        let actual = team_contains_players_under_10_m(team);
+        let actual = team_contains_players_under_10_m(&team);
         let expected = ValidationResult::valid();
 
         assert_eq!(expected, actual)
@@ -1014,8 +1076,8 @@ mod tests {
             ],
         };
 
-        let clubs_by_club_id = build_clubs_by_club_id(BOOTSTRAP_JSON);
-        let actual = team_contains_players_from_newly_promoted_clubs(clubs_by_club_id, team);
+        let clubs_by_club_id = build_clubs_by_id(BOOTSTRAP_JSON);
+        let actual = team_contains_players_from_newly_promoted_clubs(&clubs_by_club_id, &team);
         let expected = ValidationResult::invalid(
             "Yikes! Jake Peters has not included players from Burnley. That's gonna sting",
         );
@@ -1193,8 +1255,8 @@ mod tests {
             ],
         };
 
-        let clubs_by_club_id = build_clubs_by_club_id(BOOTSTRAP_JSON);
-        let actual = team_contains_players_from_newly_promoted_clubs(clubs_by_club_id, team);
+        let clubs_by_club_id = build_clubs_by_id(BOOTSTRAP_JSON);
+        let actual = team_contains_players_from_newly_promoted_clubs(&clubs_by_club_id, &team);
         let expected = ValidationResult::valid();
 
         assert_eq!(expected, actual)

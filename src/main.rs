@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use serde_json::{from_str, Value};
 use std::collections::HashMap;
 
 const PLAYER_AND_TEAM_IDS: [FplTeamInfo; 8] = [
@@ -36,7 +35,9 @@ const PLAYER_AND_TEAM_IDS: [FplTeamInfo; 8] = [
         team_id: 8828197,
     },
 ];
+
 const NEWLY_PROMOTED_CLUBS: [i64; 3] = [3, 11, 17];
+const BOOTSTRAP_DATA_URI: &'static str = "https://fantasy.premierleague.com/api/bootstrap-static/";
 
 #[derive(Deserialize)]
 struct BootstrapTeam {
@@ -56,6 +57,23 @@ struct BootstrapElement {
 struct BootstrapData {
     elements: Vec<BootstrapElement>,
     teams: Vec<BootstrapTeam>,
+}
+
+#[derive(Deserialize)]
+struct PicksData {
+    picks: Vec<PickElement>,
+}
+
+#[derive(Deserialize)]
+struct PickElement {
+    is_captain: bool,
+    element: i64,
+}
+
+#[derive(Deserialize)]
+struct GameweekData {
+    current_event: i64,
+    name: String,
 }
 
 #[derive(Debug, PartialEq, Clone, Default)]
@@ -93,7 +111,6 @@ struct Player {
     price_in_millions: f64,
     club: Club,
 }
-
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 struct Team {
     id: i64,
@@ -102,6 +119,7 @@ struct Team {
     captain: Player,
     players: Vec<Player>,
 }
+
 struct FplTeamInfo {
     owner: &'static str,
     team_id: i64,
@@ -149,52 +167,34 @@ fn build_team(
     team_id: i64,
     owner: &str,
     players_by_player_id: &HashMap<i64, Player>,
-    picks_data: &str,
-    gameweek_data: &str,
+    picks_data: &PicksData,
+    gameweek_data: &GameweekData,
 ) -> Team {
-    let picks_data: Value = from_str(picks_data).unwrap();
-    let gameweek_data: Value = from_str(gameweek_data).unwrap();
-
-    let team_name = match { gameweek_data.get("name") } {
-        Some(Value::String(team_name)) => team_name,
-        _ => panic!("gameweek_data does not have team name"),
-    };
-
     let mut players = Vec::new();
     let mut captain = Player::default();
 
-    if let Some(Value::Array(picks)) = picks_data.get("picks") {
-        for pick in picks {
-            if let Value::Object(pick_obj) = pick {
-                let id = match { pick_obj.get("element").and_then(|v| v.as_i64()) } {
-                    None => panic!("element should be an integer"),
-                    Some(id) => id,
-                };
+    for pick in &picks_data.picks {
+        let id = pick.element;
+        let player = Player {
+            id,
+            name: players_by_player_id.get(&id).unwrap().name.clone(),
+            price_in_millions: players_by_player_id.get(&id).unwrap().price_in_millions,
+            club: Club {
+                id: players_by_player_id.get(&id).unwrap().club.id,
+                name: players_by_player_id.get(&id).unwrap().club.name.to_string(),
+            },
+        };
 
-                let player = Player {
-                    id,
-                    name: players_by_player_id.get(&id).unwrap().name.clone(),
-                    price_in_millions: players_by_player_id.get(&id).unwrap().price_in_millions,
-                    club: Club {
-                        id: players_by_player_id.get(&id).unwrap().club.id,
-                        name: players_by_player_id.get(&id).unwrap().club.name.to_string(),
-                    },
-                };
-
-                if { pick_obj.get("is_captain").and_then(|v| v.as_bool()) }
-                    .unwrap_or_else(|| panic!("is_captain should be a boolean value"))
-                {
-                    captain = player.clone();
-                }
-
-                players.push(player);
-            }
+        if pick.is_captain {
+            captain = player.clone();
         }
+
+        players.push(player);
     }
 
     Team {
         id: team_id,
-        name: team_name.to_string(),
+        name: gameweek_data.name.clone().to_string(),
         owner: owner.to_string(),
         captain,
         players,
@@ -257,16 +257,17 @@ fn team_contains_players_from_newly_promoted_clubs(
     ValidationResult::valid()
 }
 
-fn fetch_bootstrap_data() -> Result<BootstrapData, Box<dyn std::error::Error>> {
-    let data = ureq::get("https://fantasy.premierleague.com/api/bootstrap-static/")
-        .call()?
-        .into_body()
-        .read_json::<BootstrapData>()?;
+fn fetch_data_as_json<T>(uri: &str) -> Result<T, Box<dyn std::error::Error>>
+where
+    T: for<'de> serde::Deserialize<'de>,
+{
+    let data = ureq::get(uri).call()?.into_body().read_json::<T>()?;
     Ok(data)
 }
 
 fn main() {
-    let bootstrap_data = fetch_bootstrap_data().unwrap();
+    let bootstrap_data: BootstrapData = fetch_data_as_json(BOOTSTRAP_DATA_URI)
+        .expect("Something went wrong fetching bootstrap data");
 
     let clubs_by_club_id = build_clubs_by_id(&bootstrap_data);
     let players_by_id = build_players_by_id(&clubs_by_club_id, &bootstrap_data);
@@ -274,32 +275,17 @@ fn main() {
     let mut rules_breakers: Vec<ValidationResult> = Vec::new();
 
     for fpl_team in PLAYER_AND_TEAM_IDS {
-        let gameweek_data = ureq::get(&format!(
+        let gameweek_data: GameweekData = fetch_data_as_json(&format!(
             "https://fantasy.premierleague.com/api/entry/{}/",
             fpl_team.team_id
         ))
-        .call()
-        .unwrap()
-        .into_body()
-        .read_to_string()
-        .unwrap();
+        .expect("Something went wrong fetching gameweek data");
 
-        let gameweek_data_json: Value = from_str(&gameweek_data).unwrap();
-
-        let current_gameweek = match { gameweek_data_json.get("current_event") } {
-            Some(Value::Number(gw)) => gw,
-            _ => panic!("gameweek data does not have current_event"),
-        };
-
-        let picks_data = ureq::get(&format!(
+        let picks_data: PicksData = fetch_data_as_json(&format!(
             "https://fantasy.premierleague.com/api/entry/{}/event/{}/picks/",
-            fpl_team.team_id, current_gameweek
+            fpl_team.team_id, gameweek_data.current_event
         ))
-        .call()
-        .unwrap()
-        .into_body()
-        .read_to_string()
-        .unwrap();
+        .expect("Something went wrong fetching picks data");
 
         let team = build_team(
             fpl_team.team_id,
@@ -340,6 +326,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::from_str;
 
     const BOOTSTRAP_JSON: &str = include_str!("../tests/samples/bootstrap.json");
     const GAMEWEEK_JSON: &str = include_str!("../tests/samples/gameweek.json");
@@ -549,14 +536,19 @@ mod tests {
 
         let bootstrap_data: BootstrapData =
             from_str(&BOOTSTRAP_JSON).expect("Something went wrong parsing bootstrap data");
+        let gameweek_data: GameweekData =
+            from_str(&GAMEWEEK_JSON).expect("Something went wrong parsing gameweek data");
+        let picks_data: PicksData =
+            from_str(&PICKS_JSON).expect("Something went wrong parsing picks data");
+
         let clubs_by_club_id = build_clubs_by_id(&bootstrap_data);
         let players_by_player_id = build_players_by_id(&clubs_by_club_id.clone(), &bootstrap_data);
         let actual = build_team(
             2239760,
             "Jake",
             &players_by_player_id,
-            PICKS_JSON,
-            GAMEWEEK_JSON,
+            &picks_data,
+            &gameweek_data,
         );
 
         assert_eq!(expected, actual);
@@ -765,24 +757,24 @@ mod tests {
     fn team_to_json() {
         let bootstrap_data: BootstrapData =
             from_str(&BOOTSTRAP_JSON).expect("Something went wrong parsing bootstrap data");
-        let clubs_by_club_id = build_clubs_by_id(&bootstrap_data);
-        let players_by_player_id = build_players_by_id(&clubs_by_club_id, &bootstrap_data);
-        let picks_data = ureq::get(&format!(
+        let gameweek_data: GameweekData =
+            from_str(&GAMEWEEK_JSON).expect("Something went wrong parsing gameweek data");
+
+        let picks_data: PicksData = fetch_data_as_json(&format!(
             "https://fantasy.premierleague.com/api/entry/{}/event/{}/picks/",
             4860609, 2
         ))
-        .call()
-        .unwrap()
-        .into_body()
-        .read_to_string()
-        .unwrap();
+        .expect("Something went wrong parsing picks data");
+
+        let clubs_by_club_id = build_clubs_by_id(&bootstrap_data);
+        let players_by_player_id = build_players_by_id(&clubs_by_club_id, &bootstrap_data);
 
         let team = build_team(
             4860609,
             "Carl Shaw",
             &players_by_player_id,
             &picks_data,
-            GAMEWEEK_JSON,
+            &gameweek_data,
         );
 
         println!(

@@ -2,39 +2,8 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-const PLAYER_AND_TEAM_IDS: [FplTeamInfo; 8] = [
-    FplTeamInfo {
-        owner: "Dan",
-        team_id: 396409,
-    },
-    FplTeamInfo {
-        owner: "Jake",
-        team_id: 2239760,
-    },
-    FplTeamInfo {
-        owner: "Jay",
-        team_id: 2186577,
-    },
-    FplTeamInfo {
-        owner: "Shane",
-        team_id: 258293,
-    },
-    FplTeamInfo {
-        owner: "Dylan",
-        team_id: 761504,
-    },
-    FplTeamInfo {
-        owner: "Harry",
-        team_id: 7718758,
-    },
-    FplTeamInfo {
-        owner: "Josh",
-        team_id: 2242306,
-    },
-    FplTeamInfo {
-        owner: "Ed",
-        team_id: 8828197,
-    },
+const PLAYER_AND_TEAM_IDS: [i64; 8] = [
+    396409, 2239760, 2186577, 258293, 761504, 7718758, 2242306, 8828197,
 ];
 
 const NEWLY_PROMOTED_CLUBS: [i64; 3] = [3, 11, 17];
@@ -75,6 +44,7 @@ struct PickElement {
 struct GameweekData {
     current_event: i64,
     name: String,
+    player_first_name: String,
 }
 
 #[derive(Debug, PartialEq, Clone, Default)]
@@ -121,11 +91,6 @@ struct Team {
     players: Vec<Player>,
 }
 
-struct FplTeamInfo {
-    owner: &'static str,
-    team_id: i64,
-}
-
 fn build_clubs_by_id(bootstrap_data: &BootstrapData) -> HashMap<i64, String> {
     let mut clubs_by_id: HashMap<i64, String> = HashMap::new();
 
@@ -164,13 +129,19 @@ fn build_players_by_id(
     players_by_id
 }
 
-fn build_team(
-    team_id: i64,
-    owner: &str,
-    players_by_player_id: &HashMap<i64, Player>,
-    picks_data: &PicksData,
-    gameweek_data: &GameweekData,
-) -> Team {
+fn build_team(team_id: i64, players_by_player_id: &HashMap<i64, Player>) -> Team {
+    let gameweek_data: GameweekData = fetch_data_as_json(&format!(
+        "https://fantasy.premierleague.com/api/entry/{}/",
+        team_id
+    ))
+    .expect("Something went wrong fetching gameweek data");
+
+    let picks_data: PicksData = fetch_data_as_json(&format!(
+        "https://fantasy.premierleague.com/api/entry/{}/event/{}/picks/",
+        team_id, gameweek_data.current_event
+    ))
+    .expect("Something went wrong fetching picks data");
+
     let mut players = Vec::new();
     let mut captain = Player::default();
 
@@ -196,7 +167,7 @@ fn build_team(
     Team {
         id: team_id,
         name: gameweek_data.name.clone().to_string(),
-        owner: owner.to_string(),
+        owner: gameweek_data.player_first_name,
         captain,
         players,
     }
@@ -287,26 +258,8 @@ fn main() {
 
     let mut rules_breakers: Vec<ValidationResult> = Vec::new();
 
-    for fpl_team in PLAYER_AND_TEAM_IDS {
-        let gameweek_data: GameweekData = fetch_data_as_json(&format!(
-            "https://fantasy.premierleague.com/api/entry/{}/",
-            fpl_team.team_id
-        ))
-        .expect("Something went wrong fetching gameweek data");
-
-        let picks_data: PicksData = fetch_data_as_json(&format!(
-            "https://fantasy.premierleague.com/api/entry/{}/event/{}/picks/",
-            fpl_team.team_id, gameweek_data.current_event
-        ))
-        .expect("Something went wrong fetching picks data");
-
-        let team = build_team(
-            fpl_team.team_id,
-            fpl_team.owner,
-            &players_by_id,
-            &picks_data,
-            &gameweek_data,
-        );
+    for fpl_team_id in PLAYER_AND_TEAM_IDS {
+        let team = build_team(fpl_team_id, &players_by_id);
 
         let result = team_contains_players_under_10_m(&team);
 
@@ -557,13 +510,7 @@ mod tests {
 
         let clubs_by_club_id = build_clubs_by_id(&bootstrap_data);
         let players_by_player_id = build_players_by_id(&clubs_by_club_id.clone(), &bootstrap_data);
-        let actual = build_team(
-            2239760,
-            "Jake",
-            &players_by_player_id,
-            &picks_data,
-            &gameweek_data,
-        );
+        let actual = build_team(2239760, &players_by_player_id);
 
         assert_eq!(expected, actual);
     }
@@ -794,13 +741,7 @@ mod tests {
         let clubs_by_club_id = build_clubs_by_id(&bootstrap_data);
         let players_by_player_id = build_players_by_id(&clubs_by_club_id, &bootstrap_data);
 
-        let team = build_team(
-            986946,
-            "Javier Rufo",
-            &players_by_player_id,
-            &picks_data,
-            &gameweek_data,
-        );
+        let team = build_team(986946, &players_by_player_id);
 
         println!(
             "{}",

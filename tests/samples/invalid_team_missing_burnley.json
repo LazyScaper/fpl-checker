@@ -1,0 +1,151 @@
+{
+  "id": 986946,
+  "name": "Pedro Cask Ale",
+  "owner": "Javier Rufo",
+  "captain": {
+    "id": 430,
+    "name": "Haaland",
+    "price_in_millions": 14.0,
+    "club": {
+      "id": 13,
+      "name": "Man City"
+    }
+  },
+  "players": [
+    {
+      "id": 1,
+      "name": "Raya",
+      "price_in_millions": 5.5,
+      "club": {
+        "id": 1,
+        "name": "Arsenal"
+      }
+    },
+    {
+      "id": 402,
+      "name": "Aït-Nouri",
+      "price_in_millions": 6.0,
+      "club": {
+        "id": 13,
+        "name": "Man City"
+      }
+    },
+    {
+      "id": 5,
+      "name": "Gabriel",
+      "price_in_millions": 6.0,
+      "club": {
+        "id": 1,
+        "name": "Arsenal"
+      }
+    },
+    {
+      "id": 541,
+      "name": "Reinildo",
+      "price_in_millions": 4.0,
+      "club": {
+        "id": 17,
+        "name": "Sunderland"
+      }
+    },
+    {
+      "id": 8,
+      "name": "J.Timber",
+      "price_in_millions": 5.5,
+      "club": {
+        "id": 1,
+        "name": "Arsenal"
+      }
+    },
+    {
+      "id": 235,
+      "name": "Palmer",
+      "price_in_millions": 10.5,
+      "club": {
+        "id": 7,
+        "name": "Chelsea"
+      }
+    },
+    {
+      "id": 241,
+      "name": "Caicedo",
+      "price_in_millions": 5.5,
+      "club": {
+        "id": 7,
+        "name": "Chelsea"
+      }
+    },
+    {
+      "id": 417,
+      "name": "Cherki",
+      "price_in_millions": 6.5,
+      "club": {
+        "id": 13,
+        "name": "Man City"
+      }
+    },
+    {
+      "id": 82,
+      "name": "Semenyo",
+      "price_in_millions": 7.1,
+      "club": {
+        "id": 4,
+        "name": "Bournemouth"
+      }
+    },
+    {
+      "id": 430,
+      "name": "Haaland",
+      "price_in_millions": 14.0,
+      "club": {
+        "id": 13,
+        "name": "Man City"
+      }
+    },
+    {
+      "id": 249,
+      "name": "João Pedro",
+      "price_in_millions": 7.5,
+      "club": {
+        "id": 7,
+        "name": "Chelsea"
+      }
+    },
+    {
+      "id": 565,
+      "name": "Vicario",
+      "price_in_millions": 5.0,
+      "club": {
+        "id": 18,
+        "name": "Spurs"
+      }
+    },
+    {
+      "id": 260,
+      "name": "Guéhi",
+      "price_in_millions": 4.5,
+      "club": {
+        "id": 8,
+        "name": "Crystal Palace"
+      }
+    },
+    {
+      "id": 491,
+      "name": "Tonali",
+      "price_in_millions": 5.5,
+      "club": {
+        "id": 15,
+        "name": "Newcastle"
+      }
+    },
+    {
+      "id": 365,
+      "name": "Nmecha",
+      "price_in_millions": 5.0,
+      "club": {
+        "id": 11,
+        "name": "Leeds"
+      }
+    }
+  ]
+}

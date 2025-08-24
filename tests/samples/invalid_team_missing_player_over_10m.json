@@ -1,0 +1,151 @@
+{
+  "id": 4402816,
+  "name": "Pedro Cask Ale",
+  "owner": "Jake",
+  "captain": {
+    "id": 249,
+    "name": "João Pedro",
+    "price_in_millions": 7.5,
+    "club": {
+      "id": 7,
+      "name": "Chelsea"
+    }
+  },
+  "players": [
+    {
+      "id": 287,
+      "name": "Pickford",
+      "price_in_millions": 5.5,
+      "club": {
+        "id": 9,
+        "name": "Everton"
+      }
+    },
+    {
+      "id": 373,
+      "name": "Virgil",
+      "price_in_millions": 6.0,
+      "club": {
+        "id": 12,
+        "name": "Liverpool"
+      }
+    },
+    {
+      "id": 224,
+      "name": "Cucurella",
+      "price_in_millions": 6.0,
+      "club": {
+        "id": 7,
+        "name": "Chelsea"
+      }
+    },
+    {
+      "id": 6,
+      "name": "Saliba",
+      "price_in_millions": 6.0,
+      "club": {
+        "id": 1,
+        "name": "Arsenal"
+      }
+    },
+    {
+      "id": 507,
+      "name": "Aina",
+      "price_in_millions": 5.0,
+      "club": {
+        "id": 16,
+        "name": "Nott'm Forest"
+      }
+    },
+    {
+      "id": 324,
+      "name": "Iwobi",
+      "price_in_millions": 6.5,
+      "club": {
+        "id": 10,
+        "name": "Fulham"
+      }
+    },
+    {
+      "id": 267,
+      "name": "Sarr",
+      "price_in_millions": 6.5,
+      "club": {
+        "id": 8,
+        "name": "Crystal Palace"
+      }
+    },
+    {
+      "id": 241,
+      "name": "Caicedo",
+      "price_in_millions": 5.5,
+      "club": {
+        "id": 7,
+        "name": "Chelsea"
+      }
+    },
+    {
+      "id": 580,
+      "name": "Johnson",
+      "price_in_millions": 7.0,
+      "club": {
+        "id": 18,
+        "name": "Spurs"
+      }
+    },
+    {
+      "id": 249,
+      "name": "João Pedro",
+      "price_in_millions": 7.5,
+      "club": {
+        "id": 7,
+        "name": "Chelsea"
+      }
+    },
+    {
+      "id": 430,
+      "name": "Haaland",
+      "price_in_millions": 14.0,
+      "club": {
+        "id": 13,
+        "name": "Man City"
+      }
+    },
+    {
+      "id": 1,
+      "name": "Raya",
+      "price_in_millions": 5.5,
+      "club": {
+        "id": 1,
+        "name": "Arsenal"
+      }
+    },
+    {
+      "id": 452,
+      "name": "Amad",
+      "price_in_millions": 6.5,
+      "club": {
+        "id": 14,
+        "name": "Man Utd"
+      }
+    },
+    {
+      "id": 8,
+      "name": "J.Timber",
+      "price_in_millions": 5.5,
+      "club": {
+        "id": 1,
+        "name": "Arsenal"
+      }
+    },
+    {
+      "id": 178,
+      "name": "Welbeck",
+      "price_in_millions": 6.5,
+      "club": {
+        "id": 6,
+        "name": "Brighton"
+      }
+    }
+  ]
+}

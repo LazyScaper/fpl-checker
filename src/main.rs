@@ -295,6 +295,12 @@ mod tests {
     const PICKS_JSON: &str = include_str!("../tests/samples/picks.json");
     const VALID_TEAM_JSON: &str = include_str!("../tests/samples/valid_team.json");
     const INVALID_TEAM_JSON: &str = include_str!("../tests/samples/invalid_team.json");
+    const INVALID_TEAM_DUPLICATE_ARSENAL_JSON: &str =
+        include_str!("../tests/samples/invalid_team_duplicate_arsenal.json");
+    const INVALID_TEAM_MISSING_PLAYER_OVER_10M: &str =
+        include_str!("../tests/samples/invalid_team_missing_player_over_10m.json");
+    const INVALID_TEAM_MISSING_BURNLEY: &str =
+        include_str!("../tests/samples/invalid_team_missing_burnley.json");
 
     #[test]
     fn should_build_clubs_by_club_id_from_bootstrap_data() {
@@ -330,172 +336,8 @@ mod tests {
 
     #[test]
     fn should_build_team_from_data() {
-        let expected = Team {
-            id: 2239760,
-            name: "Pedro Cask Ale".to_string(),
-            owner: "Jake".to_string(),
-            captain: Player {
-                id: 249,
-                name: "João Pedro".to_string(),
-                price_in_millions: 7.5,
-                club: Club {
-                    id: 7,
-                    name: "Chelsea".to_string(),
-                },
-            },
-            players: vec![
-                Player {
-                    id: 287,
-                    name: "Pickford".to_string(),
-                    price_in_millions: 5.5,
-                    club: Club {
-                        id: 9,
-
-                        name: "Everton".to_string(),
-                    },
-                },
-                Player {
-                    id: 145,
-                    name: "De Cuyper".to_string(),
-                    price_in_millions: 4.5,
-                    club: Club {
-                        id: 6,
-
-                        name: "Brighton".to_string(),
-                    },
-                },
-                Player {
-                    id: 506,
-                    name: "Murillo".to_string(),
-                    price_in_millions: 5.5,
-                    club: Club {
-                        id: 16,
-
-                        name: "Nott'm Forest".to_string(),
-                    },
-                },
-                Player {
-                    id: 348,
-                    name: "Rodon".to_string(),
-                    price_in_millions: 4.0,
-                    club: Club {
-                        id: 11,
-
-                        name: "Leeds".to_string(),
-                    },
-                },
-                Player {
-                    id: 119,
-                    name: "Mbeumo".to_string(),
-                    price_in_millions: 8.0,
-                    club: Club {
-                        id: 14,
-
-                        name: "Man Utd".to_string(),
-                    },
-                },
-                Player {
-                    id: 382,
-                    name: "Wirtz".to_string(),
-                    price_in_millions: 8.5,
-                    club: Club {
-                        id: 12,
-
-                        name: "Liverpool".to_string(),
-                    },
-                },
-                Player {
-                    id: 413,
-                    name: "Marmoush".to_string(),
-                    price_in_millions: 8.5,
-                    club: Club {
-                        id: 13,
-
-                        name: "Man City".to_string(),
-                    },
-                },
-                Player {
-                    id: 582,
-                    name: "Kudus".to_string(),
-                    price_in_millions: 6.5,
-                    club: Club {
-                        id: 18,
-
-                        name: "Spurs".to_string(),
-                    },
-                },
-                Player {
-                    id: 666,
-                    name: "Gyökeres".to_string(),
-                    price_in_millions: 9.0,
-                    club: Club {
-                        id: 1,
-
-                        name: "Arsenal".to_string(),
-                    },
-                },
-                Player {
-                    id: 249,
-                    name: "João Pedro".to_string(),
-                    price_in_millions: 7.5,
-                    club: Club {
-                        id: 7,
-
-                        name: "Chelsea".to_string(),
-                    },
-                },
-                Player {
-                    id: 624,
-                    name: "Bowen".to_string(),
-                    price_in_millions: 8.0,
-                    club: Club {
-                        id: 19,
-
-                        name: "West Ham".to_string(),
-                    },
-                },
-                Player {
-                    id: 470,
-                    name: "Dúbravka".to_string(),
-                    price_in_millions: 4.0,
-                    club: Club {
-                        id: 3,
-
-                        name: "Burnley".to_string(),
-                    },
-                },
-                Player {
-                    id: 486,
-                    name: "Elanga".to_string(),
-                    price_in_millions: 7.0,
-                    club: Club {
-                        id: 15,
-
-                        name: "Newcastle".to_string(),
-                    },
-                },
-                Player {
-                    id: 541,
-                    name: "Reinildo".to_string(),
-                    price_in_millions: 4.0,
-                    club: Club {
-                        id: 17,
-
-                        name: "Sunderland".to_string(),
-                    },
-                },
-                Player {
-                    id: 256,
-                    name: "Muñoz".to_string(),
-                    price_in_millions: 5.5,
-                    club: Club {
-                        id: 8,
-
-                        name: "Crystal Palace".to_string(),
-                    },
-                },
-            ],
-        };
+        let expected: Team =
+            from_str(&VALID_TEAM_JSON).expect("Something went wrong parsing valid team");
 
         let bootstrap_data: BootstrapData =
             from_str(&BOOTSTRAP_JSON).expect("Something went wrong parsing bootstrap data");
@@ -506,56 +348,22 @@ mod tests {
 
         let clubs_by_club_id = build_clubs_by_id(&bootstrap_data);
         let players_by_player_id = build_players_by_id(&clubs_by_club_id.clone(), &bootstrap_data);
-        let actual = build_team_from_data(2239760, &players_by_player_id, &gameweek_data, &picks_data);
+        let actual =
+            build_team_from_data(2239760, &players_by_player_id, &gameweek_data, &picks_data);
 
-        assert_eq!(expected, actual);
+        assert_eq!(actual, expected);
     }
 
     #[test]
     fn should_fail_if_team_has_more_than_one_player_from_a_club() {
-        let team = Team {
-            id: 2239760,
-            name: "Pedro Cask Ale".to_string(),
-            owner: "Jake Peters".to_string(),
-            captain: Player {
-                id: 287,
-                name: "Pickford".to_string(),
-                price_in_millions: 7.5,
-                club: Club {
-                    id: 9,
-
-                    name: "Everton".to_string(),
-                },
-            },
-            players: vec![
-                Player {
-                    id: 287,
-                    name: "Pickford".to_string(),
-                    price_in_millions: 7.5,
-                    club: Club {
-                        id: 9,
-
-                        name: "Everton".to_string(),
-                    },
-                },
-                Player {
-                    id: 291,
-                    name: "James Tarkowski".to_string(),
-                    price_in_millions: 5.5,
-                    club: Club {
-                        id: 9,
-
-                        name: "Everton".to_string(),
-                    },
-                },
-            ],
-        };
+        let team = from_str(&INVALID_TEAM_DUPLICATE_ARSENAL_JSON)
+            .expect("Something went wrong parsing invalid team");
         let actual = team_contains_at_most_one_player_per_club(&team);
         let expected = ValidationResult::invalid(
-            "Jake Peters has shat the bed. Pedro Cask Ale contains more than 1 player from Everton (Pickford and James Tarkowski)",
+            "Jake has shat the bed. Pedro Cask Ale contains more than 1 player from Arsenal (Gabriel and Saliba)",
         );
 
-        assert_eq!(expected, actual)
+        assert_eq!(actual, expected)
     }
 
     #[test]
@@ -565,54 +373,18 @@ mod tests {
         let actual = team_contains_at_most_one_player_per_club(&team);
         let expected = ValidationResult::valid();
 
-        assert_eq!(expected, actual)
+        assert_eq!(actual, expected)
     }
 
     #[test]
     fn should_fail_if_team_has_player_above_price_limit() {
-        let team = Team {
-            id: 2239760,
-            name: "Pedro Cask Ale".to_string(),
-            owner: "Jake Peters".to_string(),
-            captain: Player {
-                id: 287,
-                name: "Pickford".to_string(),
-                price_in_millions: 7.5,
-                club: Club {
-                    id: 9,
-
-                    name: "Everton".to_string(),
-                },
-            },
-            players: vec![
-                Player {
-                    id: 287,
-                    name: "Pickford".to_string(),
-                    price_in_millions: 7.5,
-                    club: Club {
-                        id: 9,
-
-                        name: "Everton".to_string(),
-                    },
-                },
-                Player {
-                    id: 291,
-                    name: "James Tarkowski".to_string(),
-                    price_in_millions: 10.5,
-                    club: Club {
-                        id: 9,
-
-                        name: "Everton".to_string(),
-                    },
-                },
-            ],
-        };
+        let team = from_str(&INVALID_TEAM_MISSING_PLAYER_OVER_10M)
+            .expect("Something went wrong parsing invalid team");
         let actual = team_contains_players_under_10_m(&team);
-        let expected = ValidationResult::invalid(
-            "Big wompers! Jake Peters has gone overbudget with James Tarkowski (10.5m)",
-        );
+        let expected =
+            ValidationResult::invalid("Big wompers! Jake has gone overbudget with Haaland (14m)");
 
-        assert_eq!(expected, actual)
+        assert_eq!(actual, expected)
     }
 
     #[test]
@@ -633,78 +405,23 @@ mod tests {
         let actual = team_contains_players_under_10_m(&team);
         let expected = ValidationResult::valid();
 
-        assert_eq!(expected, actual)
+        assert_eq!(actual, expected)
     }
 
     #[test]
     fn should_fail_if_team_does_not_have_players_from_newly_promoted_clubs() {
-        let team = Team {
-            id: 2239760,
-            name: "Pedro Cask Ale".to_string(),
-            owner: "Jake Peters".to_string(),
-            captain: Player {
-                id: 287,
-                name: "Pickford".to_string(),
-                price_in_millions: 7.5,
-                club: Club {
-                    id: 9,
-
-                    name: "Everton".to_string(),
-                },
-            },
-            players: vec![
-                Player {
-                    id: 287,
-                    name: "Pickford".to_string(),
-                    price_in_millions: 7.5,
-                    club: Club {
-                        id: 9,
-
-                        name: "Everton".to_string(),
-                    },
-                },
-                Player {
-                    id: 291,
-                    name: "James Tarkowski".to_string(),
-                    price_in_millions: 10.5,
-                    club: Club {
-                        id: 9,
-
-                        name: "Everton".to_string(),
-                    },
-                },
-                Player {
-                    id: 348,
-                    name: "Rodon".to_string(),
-                    price_in_millions: 4.0,
-                    club: Club {
-                        id: 11,
-
-                        name: "Leeds".to_string(),
-                    },
-                },
-                Player {
-                    id: 541,
-                    name: "Reinildo".to_string(),
-                    price_in_millions: 4.0,
-                    club: Club {
-                        id: 17,
-
-                        name: "Sunderland".to_string(),
-                    },
-                },
-            ],
-        };
+        let team = from_str(INVALID_TEAM_MISSING_BURNLEY)
+            .expect("Something went wrong parsing invalid team");
 
         let bootstrap_data: BootstrapData =
             from_str(&BOOTSTRAP_JSON).expect("Something went wrong parsing bootstrap data");
         let clubs_by_club_id = build_clubs_by_id(&bootstrap_data);
         let actual = team_contains_players_from_newly_promoted_clubs(&clubs_by_club_id, &team);
         let expected = ValidationResult::invalid(
-            "Yikes! Jake Peters has not included players from Burnley. That's gonna sting",
+            "Yikes! Javier Rufo has not included players from Burnley. That's gonna sting",
         );
 
-        assert_eq!(expected, actual)
+        assert_eq!(actual, expected)
     }
 
     #[test]
@@ -717,7 +434,7 @@ mod tests {
         let actual = team_contains_players_from_newly_promoted_clubs(&clubs_by_club_id, &team);
         let expected = ValidationResult::valid();
 
-        assert_eq!(expected, actual)
+        assert_eq!(actual, expected)
     }
 
     #[ignore]
@@ -730,14 +447,15 @@ mod tests {
 
         let picks_data: PicksData = fetch_data_as_json(&format!(
             "https://fantasy.premierleague.com/api/entry/{}/event/{}/picks/",
-            986946, 2
+            866231, 2
         ))
         .expect("Something went wrong parsing picks data");
 
         let clubs_by_club_id = build_clubs_by_id(&bootstrap_data);
         let players_by_player_id = build_players_by_id(&clubs_by_club_id, &bootstrap_data);
 
-        let team = build_team_from_data(986946, &players_by_player_id, &gameweek_data, &picks_data);
+        let team =
+            build_team_from_data(4402816, &players_by_player_id, &gameweek_data, &picks_data);
 
         println!(
             "{}",

@@ -1,281 +1,30 @@
-use indexmap::IndexMap;
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use constants::{BOOTSTRAP_DATA_URI, PLAYER_AND_TEAM_IDS};
+use models::{BootstrapData, ValidationResult};
 use std::ops::Not;
 
-const PLAYER_AND_TEAM_IDS: [i64; 8] = [
-    396409, 2239760, 2186577, 258293, 761504, 7718758, 2242306, 8828197,
-];
-
-const NEWLY_PROMOTED_CLUBS: [i64; 3] = [3, 11, 17];
-const BOOTSTRAP_DATA_URI: &'static str = "https://fantasy.premierleague.com/api/bootstrap-static/";
-
-#[derive(Deserialize)]
-struct BootstrapTeam {
-    id: i64,
-    name: String,
-}
-
-#[derive(Deserialize)]
-struct BootstrapElement {
-    id: i64,
-    web_name: String,
-    now_cost: f64,
-    team: i64,
-}
-
-#[derive(Deserialize)]
-struct BootstrapData {
-    elements: Vec<BootstrapElement>,
-    teams: Vec<BootstrapTeam>,
-}
-
-#[derive(Deserialize)]
-struct PicksData {
-    picks: Vec<PickElement>,
-}
-
-#[derive(Deserialize)]
-struct PickElement {
-    is_captain: bool,
-    element: i64,
-}
-
-#[derive(Deserialize)]
-struct GameweekData {
-    current_event: i64,
-    name: String,
-    player_first_name: String,
-}
-
-#[derive(Debug, PartialEq, Clone, Default)]
-struct ValidationResult {
-    is_valid: bool,
-    reason: String,
-}
-
-impl ValidationResult {
-    fn valid() -> Self {
-        Self {
-            is_valid: true,
-            reason: "".to_string(),
-        }
-    }
-
-    fn invalid(reason: &str) -> Self {
-        Self {
-            is_valid: false,
-            reason: reason.to_string(),
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
-struct Club {
-    id: i64,
-    name: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
-struct Player {
-    id: i64,
-    name: String,
-    price_in_millions: f64,
-    club: Club,
-}
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-struct Team {
-    id: i64,
-    name: String,
-    owner: String,
-    captain: Player,
-    players: Vec<Player>,
-}
-
-fn build_clubs_by_id(bootstrap_data: &BootstrapData) -> HashMap<i64, String> {
-    let mut clubs_by_id: HashMap<i64, String> = HashMap::new();
-
-    for club in &bootstrap_data.teams {
-        clubs_by_id.insert(club.id, club.name.clone());
-    }
-
-    clubs_by_id
-}
-
-fn build_players_by_id(
-    clubs_by_club_id: &HashMap<i64, String>,
-    bootstrap_data: &BootstrapData,
-) -> HashMap<i64, Player> {
-    let mut players_by_id: HashMap<i64, Player> = HashMap::new();
-
-    for element in &bootstrap_data.elements {
-        let player = Player {
-            id: element.id,
-            name: element.web_name.clone(),
-            price_in_millions: element.now_cost / 10.0,
-            club: Club {
-                id: element.team,
-                name: match { clubs_by_club_id.get(&element.team) } {
-                    Some(team_name) => team_name.to_string(),
-                    _ => {
-                        panic!("Could not find a team")
-                    }
-                },
-            },
-        };
-
-        players_by_id.insert(element.id, player);
-    }
-
-    players_by_id
-}
-
-fn fetch_and_build_team(team_id: i64, players_by_player_id: &HashMap<i64, Player>) -> Team {
-    let gameweek_data: GameweekData = fetch_data_as_json(&format!(
-        "https://fantasy.premierleague.com/api/entry/{}/",
-        team_id
-    ))
-    .expect("Something went wrong fetching gameweek data");
-
-    let picks_data: PicksData = fetch_data_as_json(&format!(
-        "https://fantasy.premierleague.com/api/entry/{}/event/{}/picks/",
-        team_id, gameweek_data.current_event
-    ))
-    .expect("Something went wrong fetching picks data");
-
-    build_team_from_data(team_id, players_by_player_id, &gameweek_data, &picks_data)
-}
-
-fn build_team_from_data(
-    team_id: i64,
-    players_by_player_id: &HashMap<i64, Player>,
-    gameweek_data: &GameweekData,
-    picks_data: &PicksData,
-) -> Team {
-    let mut players = Vec::new();
-    let mut captain = Player::default();
-
-    for pick in &picks_data.picks {
-        let id = pick.element;
-        let player = Player {
-            id,
-            name: players_by_player_id.get(&id).unwrap().name.clone(),
-            price_in_millions: players_by_player_id.get(&id).unwrap().price_in_millions,
-            club: Club {
-                id: players_by_player_id.get(&id).unwrap().club.id,
-                name: players_by_player_id.get(&id).unwrap().club.name.to_string(),
-            },
-        };
-
-        if pick.is_captain {
-            captain = player.clone();
-        }
-
-        players.push(player);
-    }
-
-    Team {
-        id: team_id,
-        name: gameweek_data.name.clone(),
-        owner: gameweek_data.player_first_name.clone(),
-        captain,
-        players,
-    }
-}
-
-fn team_contains_players_under_10_m(team: &Team) -> ValidationResult {
-    let mut players_above_price_threshold: IndexMap<String, f64> = IndexMap::new();
-
-    for player in &team.players {
-        if player.price_in_millions >= 10.0 {
-            players_above_price_threshold.insert(player.name.clone(), player.price_in_millions);
-        }
-    }
-
-    let mut violation_string: String = format!(
-        "Big wompers! {} has gone overbudget with ",
-        team.owner.clone()
-    );
-
-    for (index, (player_name, price)) in players_above_price_threshold.iter().enumerate() {
-        if index == 0 {
-        } else if index == players_above_price_threshold.len() - 1 {
-            violation_string.push_str(" and ");
-        } else {
-            violation_string.push_str(", ");
-        }
-        violation_string.push_str(&format!("{} ({}m)", &player_name, price));
-    }
-
-    if players_above_price_threshold.len() > 0 {
-        return ValidationResult::invalid(&violation_string);
-    }
-
-    ValidationResult::valid()
-}
-
-fn team_contains_at_most_one_player_per_club(team: &Team) -> ValidationResult {
-    let mut seen_players_by_club_id: HashMap<i64, Player> = HashMap::new();
-
-    for player in &team.players {
-        if seen_players_by_club_id.contains_key(&player.club.id) {
-            return ValidationResult::invalid(&format!(
-                "{} has shat the bed. {} contains more than 1 player from {} ({} and {})",
-                &team.owner,
-                &team.name,
-                &player.club.name,
-                seen_players_by_club_id.get(&player.club.id).unwrap().name,
-                &player.name
-            ));
-        };
-        seen_players_by_club_id.insert(player.club.id, player.clone());
-    }
-
-    ValidationResult::valid()
-}
-
-fn team_contains_players_from_newly_promoted_clubs(
-    clubs_by_club_id: &HashMap<i64, String>,
-    team: &Team,
-) -> ValidationResult {
-    for club_id in NEWLY_PROMOTED_CLUBS {
-        if !team.players.iter().any(|player| player.club.id == club_id) {
-            return ValidationResult::invalid(&format!(
-                "Yikes! {} has not included players from {}. That's gonna sting",
-                team.owner,
-                clubs_by_club_id.get(&club_id).unwrap()
-            ));
-        }
-    }
-
-    ValidationResult::valid()
-}
-
-fn fetch_data_as_json<T>(uri: &str) -> Result<T, Box<dyn std::error::Error>>
-where
-    T: for<'de> serde::Deserialize<'de>,
-{
-    let data = ureq::get(uri).call()?.into_body().read_json::<T>()?;
-    Ok(data)
-}
+mod api;
+mod builders;
+mod constants;
+mod models;
+mod validators;
 
 fn main() {
-    let bootstrap_data: BootstrapData = fetch_data_as_json(BOOTSTRAP_DATA_URI)
+    let bootstrap_data: BootstrapData = api::fetch_data_as_json(BOOTSTRAP_DATA_URI)
         .expect("Something went wrong fetching bootstrap data");
-    let clubs_by_club_id = build_clubs_by_id(&bootstrap_data);
-    let players_by_id = build_players_by_id(&clubs_by_club_id, &bootstrap_data);
+    let clubs_by_club_id = builders::build_clubs_by_id(&bootstrap_data);
+    let players_by_id = builders::build_players_by_id(&clubs_by_club_id, &bootstrap_data);
 
     let mut validation_results: Vec<ValidationResult> = Vec::new();
 
     for fpl_team_id in PLAYER_AND_TEAM_IDS {
-        let team = fetch_and_build_team(fpl_team_id, &players_by_id);
+        let team = builders::fetch_and_build_team(fpl_team_id, &players_by_id);
 
-        validation_results.push(team_contains_players_under_10_m(&team));
-        validation_results.push(team_contains_players_from_newly_promoted_clubs(
+        validation_results.push(validators::team_contains_players_under_10_m(&team));
+        validation_results.push(validators::team_contains_players_from_newly_promoted_clubs(
             &clubs_by_club_id,
             &team,
         ));
-        validation_results.push(team_contains_at_most_one_player_per_club(&team));
+        validation_results.push(validators::team_contains_at_most_one_player_per_club(&team));
     }
 
     for validation in validation_results {
@@ -288,6 +37,13 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::api::fetch_data_as_json;
+    use crate::builders::{build_clubs_by_id, build_players_by_id, build_team_from_data};
+    use crate::models::{Club, GameweekData, PicksData, Player, Team};
+    use crate::validators::{
+        team_contains_at_most_one_player_per_club, team_contains_players_from_newly_promoted_clubs,
+        team_contains_players_under_10_m,
+    };
     use serde_json::from_str;
 
     const BOOTSTRAP_JSON: &str = include_str!("../tests/samples/bootstrap.json");

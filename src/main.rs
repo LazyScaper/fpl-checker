@@ -1,3 +1,4 @@
+use crate::models::Team;
 use constants::{BOOTSTRAP_DATA_URI, PLAYER_AND_TEAM_IDS};
 use models::{BootstrapData, ValidationResult};
 use std::ops::Not;
@@ -19,12 +20,7 @@ fn main() {
     for fpl_team_id in PLAYER_AND_TEAM_IDS {
         let team = builders::fetch_and_build_team(fpl_team_id, &players_by_id);
 
-        validation_results.push(validators::team_contains_players_under_10_m(&team));
-        validation_results.push(validators::team_contains_players_from_newly_promoted_clubs(
-            &clubs_by_club_id,
-            &team,
-        ));
-        validation_results.push(validators::team_contains_at_most_one_player_per_club(&team));
+        validators::run_valiations(&clubs_by_club_id, &mut validation_results, &team);
     }
 
     for validation in validation_results {

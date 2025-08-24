@@ -70,3 +70,16 @@ pub fn team_contains_players_from_newly_promoted_clubs(
 
     ValidationResult::valid()
 }
+
+pub fn run_valiations(
+    clubs_by_club_id: &HashMap<i64, String>,
+    validation_results: &mut Vec<ValidationResult>,
+    team: &Team,
+) {
+    validation_results.push(team_contains_players_under_10_m(&team));
+    validation_results.push(team_contains_players_from_newly_promoted_clubs(
+        &clubs_by_club_id,
+        &team,
+    ));
+    validation_results.push(team_contains_at_most_one_player_per_club(&team));
+}

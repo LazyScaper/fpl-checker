@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{from_str, Value};
 use std::collections::HashMap;
 
@@ -38,8 +38,27 @@ const PLAYER_AND_TEAM_IDS: [FplTeamInfo; 8] = [
 ];
 const NEWLY_PROMOTED_CLUBS: [i64; 3] = [3, 11, 17];
 
-#[derive(Debug, PartialEq, Clone, Default)]
+#[derive(Deserialize)]
+struct BootstrapTeam {
+    id: i64,
+    name: String,
+}
 
+#[derive(Deserialize)]
+struct BootstrapElement {
+    id: i64,
+    web_name: String,
+    now_cost: f64,
+    team: i64,
+}
+
+#[derive(Deserialize)]
+struct BootstrapData {
+    elements: Vec<BootstrapElement>,
+    teams: Vec<BootstrapTeam>,
+}
+
+#[derive(Debug, PartialEq, Clone, Default)]
 struct ValidationResult {
     is_valid: bool,
     reason: String,
@@ -61,13 +80,13 @@ impl ValidationResult {
     }
 }
 
-#[derive(Deserialize, Debug, PartialEq, Clone, Default)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 struct Club {
     id: i64,
     name: String,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Clone, Default)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 struct Player {
     id: i64,
     name: String,
@@ -75,7 +94,7 @@ struct Player {
     club: Club,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 struct Team {
     id: i64,
     name: String,
@@ -88,25 +107,11 @@ struct FplTeamInfo {
     team_id: i64,
 }
 
-fn build_clubs_by_id(bootstrap_data: &str) -> HashMap<i64, String> {
-    let bootstrap_data: Value = from_str(bootstrap_data).unwrap();
+fn build_clubs_by_id(bootstrap_data: &BootstrapData) -> HashMap<i64, String> {
     let mut clubs_by_id: HashMap<i64, String> = HashMap::new();
 
-    if let Some(Value::Array(clubs)) = bootstrap_data.get("teams") {
-        for club in clubs {
-            if let Value::Object(club_obj) = club {
-                let club_id = match { club_obj.get("id").and_then(|v| v.as_i64()) } {
-                    None => panic!("id should be an integer"),
-                    Some(id) => id,
-                };
-                let club_name = match { club_obj.get("name") } {
-                    Some(Value::String(name)) => name.to_string(),
-                    _ => panic!("club_obj does not have name"),
-                };
-
-                clubs_by_id.insert(club_id, club_name);
-            }
-        }
+    for club in &bootstrap_data.teams {
+        clubs_by_id.insert(club.id, club.name.clone());
     }
 
     clubs_by_id
@@ -114,50 +119,27 @@ fn build_clubs_by_id(bootstrap_data: &str) -> HashMap<i64, String> {
 
 fn build_players_by_id(
     clubs_by_club_id: &HashMap<i64, String>,
-    bootstrap_data: &str,
+    bootstrap_data: &BootstrapData,
 ) -> HashMap<i64, Player> {
-    let bootstrap_data: Value = from_str(bootstrap_data).unwrap();
     let mut players_by_id: HashMap<i64, Player> = HashMap::new();
 
-    if let Some(Value::Array(elements)) = bootstrap_data.get("elements") {
-        for element in elements {
-            if let Value::Object(element_obj) = element {
-                let id = match { element_obj.get("id").and_then(|v| v.as_i64()) } {
-                    None => panic!("id should be an integer"),
-                    Some(id) => id,
-                };
-                let club_id = match { element_obj.get("team").and_then(|v| v.as_i64()) } {
-                    None => panic!("team should be an integer"),
-                    Some(team) => team,
-                };
-                let web_name = match { element_obj.get("web_name") } {
-                    Some(Value::String(first_name)) => first_name,
-                    _ => panic!("element_obj does not have web_name"),
-                };
-                let price_in_100k = match { element_obj.get("now_cost").and_then(|v| v.as_f64()) } {
-                    None => panic!("now_cost should be an integer"),
-                    Some(price) => price,
-                };
-                let price_in_millions: f64 = price_in_100k / 10.0;
+    for element in &bootstrap_data.elements {
+        let player = Player {
+            id: element.id,
+            name: element.web_name.clone(),
+            price_in_millions: element.now_cost / 10.0,
+            club: Club {
+                id: element.team,
+                name: match { clubs_by_club_id.get(&element.team) } {
+                    Some(team_name) => team_name.to_string(),
+                    _ => {
+                        panic!("Could not find a team")
+                    }
+                },
+            },
+        };
 
-                let player = Player {
-                    id,
-                    name: web_name.to_string(),
-                    price_in_millions,
-                    club: Club {
-                        id: club_id,
-                        name: match { clubs_by_club_id.get(&club_id) } {
-                            Some(team_name) => team_name.to_string(),
-                            _ => {
-                                panic!("Could not find a team")
-                            }
-                        },
-                    },
-                };
-
-                players_by_id.insert(id, player);
-            }
-        }
+        players_by_id.insert(element.id, player);
     }
 
     players_by_id
@@ -275,13 +257,16 @@ fn team_contains_players_from_newly_promoted_clubs(
     ValidationResult::valid()
 }
 
-fn main() {
-    let bootstrap_data = ureq::get("https://fantasy.premierleague.com/api/bootstrap-static/")
-        .call()
-        .unwrap()
+fn fetch_bootstrap_data() -> Result<BootstrapData, Box<dyn std::error::Error>> {
+    let data = ureq::get("https://fantasy.premierleague.com/api/bootstrap-static/")
+        .call()?
         .into_body()
-        .read_to_string()
-        .unwrap();
+        .read_json::<BootstrapData>()?;
+    Ok(data)
+}
+
+fn main() {
+    let bootstrap_data = fetch_bootstrap_data().unwrap();
 
     let clubs_by_club_id = build_clubs_by_id(&bootstrap_data);
     let players_by_id = build_players_by_id(&clubs_by_club_id, &bootstrap_data);
@@ -363,7 +348,9 @@ mod tests {
 
     #[test]
     fn should_build_clubs_by_club_id_from_bootstrap_data() {
-        let actual = build_clubs_by_id(BOOTSTRAP_JSON);
+        let bootstrap_data: BootstrapData =
+            from_str(&BOOTSTRAP_JSON).expect("Something went wrong parsing bootstrap data");
+        let actual = build_clubs_by_id(&bootstrap_data);
 
         assert_eq!(Some(&"Arsenal".to_string()), actual.get(&1));
         assert_eq!(Some(&"Burnley".to_string()), actual.get(&3));
@@ -383,8 +370,10 @@ mod tests {
             },
         };
 
-        let clubs_by_club_id = build_clubs_by_id(BOOTSTRAP_JSON);
-        let actual = build_players_by_id(&clubs_by_club_id, BOOTSTRAP_JSON);
+        let bootstrap_data: BootstrapData =
+            from_str(&BOOTSTRAP_JSON).expect("Something went wrong parsing bootstrap data");
+        let clubs_by_club_id = build_clubs_by_id(&bootstrap_data);
+        let actual = build_players_by_id(&clubs_by_club_id, &bootstrap_data);
 
         assert_eq!(Some(&partial_expected), actual.get(&partial_expected.id));
     }
@@ -557,8 +546,11 @@ mod tests {
                 },
             ],
         };
-        let clubs_by_club_id = build_clubs_by_id(BOOTSTRAP_JSON);
-        let players_by_player_id = build_players_by_id(&clubs_by_club_id.clone(), BOOTSTRAP_JSON);
+
+        let bootstrap_data: BootstrapData =
+            from_str(&BOOTSTRAP_JSON).expect("Something went wrong parsing bootstrap data");
+        let clubs_by_club_id = build_clubs_by_id(&bootstrap_data);
+        let players_by_player_id = build_players_by_id(&clubs_by_club_id.clone(), &bootstrap_data);
         let actual = build_team(
             2239760,
             "Jake",
@@ -619,7 +611,8 @@ mod tests {
 
     #[test]
     fn should_pass_if_team_does_not_have_more_than_one_player_from_a_club() {
-        let team: Team = read_from_json(VALID_TEAM_JSON).expect("Something went wrong");
+        let team: Team =
+            from_str(&VALID_TEAM_JSON).expect("Something went wrong parsing valid team");
         let actual = team_contains_at_most_one_player_per_club(&team);
         let expected = ValidationResult::valid();
 
@@ -675,7 +668,8 @@ mod tests {
 
     #[test]
     fn should_pass_if_team_has_players_under_price_limit() {
-        let team: Team = read_from_json(VALID_TEAM_JSON).expect("Something went wrong");
+        let team: Team =
+            from_str(&VALID_TEAM_JSON).expect("Something went wrong parsing valid team");
         let actual = team_contains_players_under_10_m(&team);
         let expected = ValidationResult::valid();
 
@@ -741,7 +735,10 @@ mod tests {
                 },
             ],
         };
-        let clubs_by_club_id = build_clubs_by_id(BOOTSTRAP_JSON);
+
+        let bootstrap_data: BootstrapData =
+            from_str(&BOOTSTRAP_JSON).expect("Something went wrong parsing bootstrap data");
+        let clubs_by_club_id = build_clubs_by_id(&bootstrap_data);
         let actual = team_contains_players_from_newly_promoted_clubs(&clubs_by_club_id, &team);
         let expected = ValidationResult::invalid(
             "Yikes! Jake Peters has not included players from Burnley. That's gonna sting",
@@ -752,17 +749,45 @@ mod tests {
 
     #[test]
     fn should_pass_if_team_has_players_from_newly_promoted_clubs() {
-        let team: Team = read_from_json(VALID_TEAM_JSON).expect("REASON");
-        let clubs_by_club_id = build_clubs_by_id(BOOTSTRAP_JSON);
+        let team: Team =
+            from_str(&VALID_TEAM_JSON).expect("Something went wrong parsing valid team");
+        let bootstrap_data: BootstrapData =
+            from_str(&BOOTSTRAP_JSON).expect("Something went wrong parsing bootstrap data");
+        let clubs_by_club_id = build_clubs_by_id(&bootstrap_data);
         let actual = team_contains_players_from_newly_promoted_clubs(&clubs_by_club_id, &team);
         let expected = ValidationResult::valid();
 
         assert_eq!(expected, actual)
     }
 
-    fn read_from_json(file_path: &str) -> Result<Team, Box<dyn std::error::Error>> {
-        let json_content = std::fs::read_to_string(file_path)?;
-        let team: Team = from_str(&json_content)?;
-        Ok(team)
+    #[ignore]
+    #[test]
+    fn team_to_json() {
+        let bootstrap_data: BootstrapData =
+            from_str(&BOOTSTRAP_JSON).expect("Something went wrong parsing bootstrap data");
+        let clubs_by_club_id = build_clubs_by_id(&bootstrap_data);
+        let players_by_player_id = build_players_by_id(&clubs_by_club_id, &bootstrap_data);
+        let picks_data = ureq::get(&format!(
+            "https://fantasy.premierleague.com/api/entry/{}/event/{}/picks/",
+            4860609, 2
+        ))
+        .call()
+        .unwrap()
+        .into_body()
+        .read_to_string()
+        .unwrap();
+
+        let team = build_team(
+            4860609,
+            "Carl Shaw",
+            &players_by_player_id,
+            &picks_data,
+            GAMEWEEK_JSON,
+        );
+
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&team).expect("Something went wrong")
+        )
     }
 }

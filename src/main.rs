@@ -1,3 +1,4 @@
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -202,7 +203,7 @@ fn build_team(
 }
 
 fn team_contains_players_under_10_m(team: &Team) -> ValidationResult {
-    let mut players_above_price_threshold: HashMap<String, f64> = HashMap::new();
+    let mut players_above_price_threshold: IndexMap<String, f64> = IndexMap::new();
 
     for player in &team.players {
         if player.price_in_millions >= 10.0 {
@@ -210,11 +211,23 @@ fn team_contains_players_under_10_m(team: &Team) -> ValidationResult {
         }
     }
 
-    for (player_name, price) in players_above_price_threshold {
-        return ValidationResult::invalid(&format!(
-            "Big wompers! {} has {} in their team. He is currently priced at {}m",
-            team.owner, player_name, price
-        ));
+    let mut violation_string: String = format!(
+        "Big wompers! {} has gone overbudget with ",
+        team.owner.clone()
+    );
+
+    for (index, (player_name, price)) in players_above_price_threshold.iter().enumerate() {
+        if index == 0 {
+        } else if index == players_above_price_threshold.len() - 1 {
+            violation_string.push_str(" and ");
+        } else {
+            violation_string.push_str(", ");
+        }
+        violation_string.push_str(&format!("{} ({}m)", &player_name, price));
+    }
+
+    if players_above_price_threshold.len() > 0 {
+        return ValidationResult::invalid(&violation_string);
     }
 
     ValidationResult::valid()
@@ -332,6 +345,7 @@ mod tests {
     const GAMEWEEK_JSON: &str = include_str!("../tests/samples/gameweek.json");
     const PICKS_JSON: &str = include_str!("../tests/samples/picks.json");
     const VALID_TEAM_JSON: &str = include_str!("../tests/samples/valid_team.json");
+    const INVALID_TEAM_JSON: &str = include_str!("../tests/samples/invalid_team.json");
 
     #[test]
     fn should_build_clubs_by_club_id_from_bootstrap_data() {
@@ -652,10 +666,21 @@ mod tests {
         };
         let actual = team_contains_players_under_10_m(&team);
         let expected = ValidationResult::invalid(
-            "Big wompers! Jake Peters has James Tarkowski in their team. He is currently priced at 10.5m",
+            "Big wompers! Jake Peters has gone overbudget with James Tarkowski (10.5m)",
         );
 
         assert_eq!(expected, actual)
+    }
+
+    #[test]
+    fn should_produce_multiple_failures_if_team_has_more_than_1_player_above_price_limit() {
+        let team = from_str(&INVALID_TEAM_JSON).expect("Something went wrong parsing invalid team");
+        let actual = team_contains_players_under_10_m(&team);
+        let expected = ValidationResult::invalid(
+            "Big wompers! Javier Rufo has gone overbudget with Palmer (10.5m) and Haaland (14m)",
+        );
+
+        assert_eq!(actual, expected)
     }
 
     #[test]
@@ -762,7 +787,7 @@ mod tests {
 
         let picks_data: PicksData = fetch_data_as_json(&format!(
             "https://fantasy.premierleague.com/api/entry/{}/event/{}/picks/",
-            4860609, 2
+            986946, 2
         ))
         .expect("Something went wrong parsing picks data");
 
@@ -770,8 +795,8 @@ mod tests {
         let players_by_player_id = build_players_by_id(&clubs_by_club_id, &bootstrap_data);
 
         let team = build_team(
-            4860609,
-            "Carl Shaw",
+            986946,
+            "Javier Rufo",
             &players_by_player_id,
             &picks_data,
             &gameweek_data,

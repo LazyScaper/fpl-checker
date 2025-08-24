@@ -1,6 +1,7 @@
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::ops::Not;
 
 const PLAYER_AND_TEAM_IDS: [i64; 8] = [
     396409, 2239760, 2186577, 258293, 761504, 7718758, 2242306, 8828197,
@@ -129,7 +130,7 @@ fn build_players_by_id(
     players_by_id
 }
 
-fn build_team(team_id: i64, players_by_player_id: &HashMap<i64, Player>) -> Team {
+fn fetch_and_build_team(team_id: i64, players_by_player_id: &HashMap<i64, Player>) -> Team {
     let gameweek_data: GameweekData = fetch_data_as_json(&format!(
         "https://fantasy.premierleague.com/api/entry/{}/",
         team_id
@@ -142,6 +143,15 @@ fn build_team(team_id: i64, players_by_player_id: &HashMap<i64, Player>) -> Team
     ))
     .expect("Something went wrong fetching picks data");
 
+    build_team_from_data(team_id, players_by_player_id, &gameweek_data, &picks_data)
+}
+
+fn build_team_from_data(
+    team_id: i64,
+    players_by_player_id: &HashMap<i64, Player>,
+    gameweek_data: &GameweekData,
+    picks_data: &PicksData,
+) -> Team {
     let mut players = Vec::new();
     let mut captain = Player::default();
 
@@ -166,8 +176,8 @@ fn build_team(team_id: i64, players_by_player_id: &HashMap<i64, Player>) -> Team
 
     Team {
         id: team_id,
-        name: gameweek_data.name.clone().to_string(),
-        owner: gameweek_data.player_first_name,
+        name: gameweek_data.name.clone(),
+        owner: gameweek_data.player_first_name.clone(),
         captain,
         players,
     }
@@ -252,39 +262,25 @@ where
 fn main() {
     let bootstrap_data: BootstrapData = fetch_data_as_json(BOOTSTRAP_DATA_URI)
         .expect("Something went wrong fetching bootstrap data");
-
     let clubs_by_club_id = build_clubs_by_id(&bootstrap_data);
     let players_by_id = build_players_by_id(&clubs_by_club_id, &bootstrap_data);
 
-    let mut rules_breakers: Vec<ValidationResult> = Vec::new();
+    let mut validation_results: Vec<ValidationResult> = Vec::new();
 
     for fpl_team_id in PLAYER_AND_TEAM_IDS {
-        let team = build_team(fpl_team_id, &players_by_id);
+        let team = fetch_and_build_team(fpl_team_id, &players_by_id);
 
-        let result = team_contains_players_under_10_m(&team);
-
-        if !result.is_valid {
-            rules_breakers.push(result);
-        }
-
-        let result = team_contains_players_from_newly_promoted_clubs(&clubs_by_club_id, &team);
-
-        if !result.is_valid {
-            rules_breakers.push(result);
-        }
-
-        let result = team_contains_at_most_one_player_per_club(&team);
-
-        if !result.is_valid {
-            rules_breakers.push(result);
-        }
+        validation_results.push(team_contains_players_under_10_m(&team));
+        validation_results.push(team_contains_players_from_newly_promoted_clubs(
+            &clubs_by_club_id,
+            &team,
+        ));
+        validation_results.push(team_contains_at_most_one_player_per_club(&team));
     }
 
-    if rules_breakers.is_empty() {
-        println!("No rules breakers found");
-    } else {
-        for rule_broken in rules_breakers {
-            println!("{}\n\n", rule_broken.reason)
+    for validation in validation_results {
+        if validation.is_valid.not() {
+            println!("{}\n\n", validation.reason)
         }
     }
 }
@@ -510,7 +506,7 @@ mod tests {
 
         let clubs_by_club_id = build_clubs_by_id(&bootstrap_data);
         let players_by_player_id = build_players_by_id(&clubs_by_club_id.clone(), &bootstrap_data);
-        let actual = build_team(2239760, &players_by_player_id);
+        let actual = build_team_from_data(2239760, &players_by_player_id, &gameweek_data, &picks_data);
 
         assert_eq!(expected, actual);
     }
@@ -741,7 +737,7 @@ mod tests {
         let clubs_by_club_id = build_clubs_by_id(&bootstrap_data);
         let players_by_player_id = build_players_by_id(&clubs_by_club_id, &bootstrap_data);
 
-        let team = build_team(986946, &players_by_player_id);
+        let team = build_team_from_data(986946, &players_by_player_id, &gameweek_data, &picks_data);
 
         println!(
             "{}",

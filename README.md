@@ -59,11 +59,11 @@ cargo run 396409
 ## Sample Output
 
 ```
-Big wompers! Shane has gone overbudget with Palmer (10.5m) and Haaland (14m)
+Womp womp! Shane has gone overbudget with Palmer (10.5m) and Haaland (14m)
 
-Jake has shat the bed. Pedro Cask Ale contains more than 1 player from Arsenal (Gabriel and Saliba)
+Oh dear, oh dear! Jake has more than 1 player from Arsenal (Gabriel and Saliba)
 
-Yikes! Harry has not included players from Burnley. That's gonna sting
+Yikes! Harry has not included players from Burnley
 ```
 
 ## Project Structure

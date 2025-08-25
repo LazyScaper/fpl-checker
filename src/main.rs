@@ -48,7 +48,7 @@ fn main() {
     }
 
     if violations.is_empty() {
-        println!("No rulebreakers found for gameweek {}!", current_gameweek);
+        println!("No rules have been broken for gameweek {}!", current_gameweek);
         return;
     }
 

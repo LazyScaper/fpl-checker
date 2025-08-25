@@ -40,7 +40,7 @@ fn main() {
 
         current_gameweek = gameweek_data.current_event;
 
-        violations.extend(validators::run_and_retain_violations(
+        violations.extend(validators::run_validators_and_retain_violations(
             &clubs_by_club_id,
             &mut validation_results,
             &team,
@@ -48,7 +48,10 @@ fn main() {
     }
 
     if violations.is_empty() {
-        println!("No rules have been broken for gameweek {}!", current_gameweek);
+        println!(
+            "No rules have been broken for gameweek {}!",
+            current_gameweek
+        );
         return;
     }
 
@@ -69,6 +72,7 @@ mod tests {
         team_contains_at_most_one_player_per_club, team_contains_players_from_newly_promoted_clubs,
         team_contains_players_under_10_m,
     };
+    use assertor::*;
     use serde_json::from_str;
 
     const BOOTSTRAP_JSON: &str = include_str!("../tests/samples/bootstrap.json");
@@ -91,10 +95,10 @@ mod tests {
             from_str(&BOOTSTRAP_JSON).expect("Something went wrong parsing bootstrap data");
         let actual = build_clubs_by_id(&bootstrap_data);
 
-        assert_eq!(Some(&"Arsenal".to_string()), actual.get(&1));
-        assert_eq!(Some(&"Burnley".to_string()), actual.get(&3));
-        assert_eq!(Some(&"Brighton".to_string()), actual.get(&6));
-        assert_eq!(Some(&"Man City".to_string()), actual.get(&13));
+        assert_that!(Some(&"Arsenal".to_string())).is_equal_to(actual.get(&1));
+        assert_that!(Some(&"Burnley".to_string())).is_equal_to(actual.get(&3));
+        assert_that!(Some(&"Brighton".to_string())).is_equal_to(actual.get(&6));
+        assert_that!(Some(&"Man City".to_string())).is_equal_to(actual.get(&13));
     }
 
     #[test]
@@ -114,7 +118,7 @@ mod tests {
         let clubs_by_club_id = build_clubs_by_id(&bootstrap_data);
         let actual = build_players_by_id(&clubs_by_club_id, &bootstrap_data);
 
-        assert_eq!(Some(&partial_expected), actual.get(&partial_expected.id));
+        assert_that!(actual.get(&partial_expected.id)).is_equal_to(Some(&partial_expected));
     }
 
     #[test]
@@ -134,7 +138,7 @@ mod tests {
         let actual =
             build_team_from_data(2239760, &players_by_player_id, &gameweek_data, &picks_data);
 
-        assert_eq!(actual, expected);
+        assert_that!(actual).is_equal_to(expected);
     }
 
     #[test]
@@ -142,11 +146,9 @@ mod tests {
         let team = from_str(&INVALID_TEAM_DUPLICATE_ARSENAL_JSON)
             .expect("Something went wrong parsing invalid team");
         let actual = team_contains_at_most_one_player_per_club(&team);
-        let expected = ValidationResult::invalid(
-            "Jake has shat the bed. Pedro Cask Ale contains more than 1 player from Arsenal (Gabriel and Gyökeres)",
-        );
 
-        assert_eq!(actual, expected)
+        assert_that!(actual.reason)
+            .contains("has more than 1 player from Arsenal (Gabriel and Gyökeres)");
     }
 
     #[test]
@@ -154,11 +156,9 @@ mod tests {
         let team = from_str(&INVALID_TEAM_MANY_PLAYERS_MANY_CLUBS_JSON)
             .expect("Something went wrong parsing invalid team");
         let actual = team_contains_at_most_one_player_per_club(&team);
-        let expected = ValidationResult::invalid(
-            "Jake has shat the bed. Pedro Cask Ale contains more than 1 player from Chelsea (Sánchez and João Pedro) more than 1 player from Arsenal (Gabriel, Saliba and Gyökeres) more than 1 player from Man Utd (Yoro and Mbeumo)",
-        );
 
-        assert_eq!(actual, expected)
+        assert_that!(actual.reason)
+            .contains("has more than 1 player from Chelsea (Sánchez and João Pedro) more than 1 player from Arsenal (Gabriel, Saliba and Gyökeres) more than 1 player from Man Utd (Yoro and Mbeumo)");
     }
 
     #[test]
@@ -168,7 +168,7 @@ mod tests {
         let actual = team_contains_at_most_one_player_per_club(&team);
         let expected = ValidationResult::valid();
 
-        assert_eq!(actual, expected)
+        assert_that!(actual).is_equal_to(expected);
     }
 
     #[test]
@@ -176,21 +176,17 @@ mod tests {
         let team = from_str(&INVALID_TEAM_MISSING_PLAYER_OVER_10M)
             .expect("Something went wrong parsing invalid team");
         let actual = team_contains_players_under_10_m(&team);
-        let expected =
-            ValidationResult::invalid("Big wompers! Jake has gone overbudget with Haaland (14m)");
 
-        assert_eq!(actual, expected)
+        assert_that!(actual.reason).contains("has gone overbudget with Haaland (14m)");
     }
 
     #[test]
     fn should_produce_multiple_failures_if_team_has_more_than_1_player_above_price_limit() {
         let team = from_str(&INVALID_TEAM_JSON).expect("Something went wrong parsing invalid team");
         let actual = team_contains_players_under_10_m(&team);
-        let expected = ValidationResult::invalid(
-            "Big wompers! Javier Rufo has gone overbudget with Palmer (10.5m) and Haaland (14m)",
-        );
 
-        assert_eq!(actual, expected)
+        assert_that!(actual.reason)
+            .contains("has gone overbudget with Palmer (10.5m) and Haaland (14m)");
     }
 
     #[test]
@@ -200,7 +196,7 @@ mod tests {
         let actual = team_contains_players_under_10_m(&team);
         let expected = ValidationResult::valid();
 
-        assert_eq!(actual, expected)
+        assert_that!(actual).is_equal_to(expected);
     }
 
     #[test]
@@ -212,11 +208,8 @@ mod tests {
             from_str(&BOOTSTRAP_JSON).expect("Something went wrong parsing bootstrap data");
         let clubs_by_club_id = build_clubs_by_id(&bootstrap_data);
         let actual = team_contains_players_from_newly_promoted_clubs(&clubs_by_club_id, &team);
-        let expected = ValidationResult::invalid(
-            "Yikes! Javier Rufo has not included players from Burnley. That's gonna sting",
-        );
 
-        assert_eq!(actual, expected)
+        assert_that!(actual.reason).contains("has not included players from Burnley")
     }
 
     #[test]
@@ -229,7 +222,7 @@ mod tests {
         let actual = team_contains_players_from_newly_promoted_clubs(&clubs_by_club_id, &team);
         let expected = ValidationResult::valid();
 
-        assert_eq!(actual, expected)
+        assert_that!(actual).is_equal_to(expected);
     }
 
     #[test]
@@ -240,13 +233,13 @@ mod tests {
         let team = from_str(&VALID_TEAM_JSON).expect("Something went wrong parsing valid team");
         let mut validation_results: Vec<ValidationResult> = Vec::new();
 
-        let violations = validators::run_and_retain_violations(
+        let violations = validators::run_validators_and_retain_violations(
             &clubs_by_club_id,
             &mut validation_results,
             &team,
         );
 
-        assert!(violations.is_empty())
+        assert_that!(violations).is_empty()
     }
 
     #[ignore]

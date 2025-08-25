@@ -1,6 +1,7 @@
-use crate::constants::NEWLY_PROMOTED_CLUBS;
+use crate::constants::{NEWLY_PROMOTED_CLUBS, VIOLATION_PREFIXS};
 use crate::models::{Player, Team, ValidationResult};
 use indexmap::IndexMap;
+use rand::prelude::IndexedRandom;
 use std::collections::HashMap;
 
 pub fn team_contains_players_under_10_m(team: &Team) -> ValidationResult {
@@ -13,7 +14,8 @@ pub fn team_contains_players_under_10_m(team: &Team) -> ValidationResult {
     }
 
     let mut violation_string: String = format!(
-        "Big wompers! {} has gone overbudget with ",
+        "{} {} has gone overbudget with ",
+        VIOLATION_PREFIXS.choose(&mut rand::rng()).unwrap(),
         team.owner.clone()
     );
 
@@ -47,9 +49,11 @@ pub fn team_contains_at_most_one_player_per_club(team: &Team) -> ValidationResul
     seen_players_by_club_name.retain(|_, players| players.len() > 1);
 
     let mut violation_string: String = format!(
-        "{} has shat the bed. {} contains",
+        "{} {} has",
+        VIOLATION_PREFIXS
+            .choose(&mut rand::rng())
+            .expect("Something went wrong grabbing a prefix"),
         team.owner.clone(),
-        team.name.clone()
     );
     for (club_name, players) in &seen_players_by_club_name {
         violation_string.push_str(&format!(" more than 1 player from {} ", club_name));
@@ -84,7 +88,8 @@ pub fn team_contains_players_from_newly_promoted_clubs(
     for club_id in NEWLY_PROMOTED_CLUBS {
         if !team.players.iter().any(|player| player.club.id == club_id) {
             return ValidationResult::invalid(&format!(
-                "Yikes! {} has not included players from {}. That's gonna sting",
+                "{} {} has not included players from {}",
+                VIOLATION_PREFIXS.choose(&mut rand::rng()).unwrap(),
                 team.owner,
                 clubs_by_club_id.get(&club_id).unwrap()
             ));
@@ -94,7 +99,7 @@ pub fn team_contains_players_from_newly_promoted_clubs(
     ValidationResult::valid()
 }
 
-pub fn run_and_retain_violations(
+pub fn run_validators_and_retain_violations(
     clubs_by_club_id: &HashMap<i64, String>,
     validation_results: &mut Vec<ValidationResult>,
     team: &Team,

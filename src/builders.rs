@@ -75,19 +75,3 @@ pub fn build_players_by_id(
 
     players_by_id
 }
-
-pub fn fetch_and_build_team(team_id: i64, players_by_player_id: &HashMap<i64, Player>) -> Team {
-    let gameweek_data: GameweekData = crate::api::fetch_data_as_json(&format!(
-        "https://fantasy.premierleague.com/api/entry/{}/",
-        team_id
-    ))
-    .expect("Something went wrong fetching gameweek data");
-
-    let picks_data: PicksData = crate::api::fetch_data_as_json(&format!(
-        "https://fantasy.premierleague.com/api/entry/{}/event/{}/picks/",
-        team_id, gameweek_data.current_event
-    ))
-    .expect("Something went wrong fetching picks data");
-
-    build_team_from_data(team_id, players_by_player_id, &gameweek_data, &picks_data)
-}

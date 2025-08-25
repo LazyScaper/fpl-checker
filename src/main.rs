@@ -1,3 +1,5 @@
+use crate::api::{fetch_gameweek_data, fetch_picks};
+use crate::builders::build_team_from_data;
 use constants::BOOTSTRAP_DATA_URI;
 use models::{BootstrapData, ValidationResult};
 use std::ops::Not;
@@ -28,14 +30,29 @@ fn main() {
     let players_by_id = builders::build_players_by_id(&clubs_by_club_id, &bootstrap_data);
 
     let mut validation_results: Vec<ValidationResult> = Vec::new();
+    let mut violations: Vec<ValidationResult> = Vec::new();
+    let mut current_gameweek = -1;
 
     for fpl_team_id in team_ids {
-        let team = builders::fetch_and_build_team(fpl_team_id, &players_by_id);
+        let gameweek_data = fetch_gameweek_data(&fpl_team_id);
+        let picks_data = fetch_picks(&fpl_team_id, &gameweek_data);
+        let team = build_team_from_data(fpl_team_id, &players_by_id, &gameweek_data, &picks_data);
 
-        validators::run_and_retain_violations(&clubs_by_club_id, &mut validation_results, &team);
+        current_gameweek = gameweek_data.current_event;
+
+        violations.extend(validators::run_and_retain_violations(
+            &clubs_by_club_id,
+            &mut validation_results,
+            &team,
+        ));
     }
 
-    for validation in validation_results {
+    if violations.is_empty() {
+        println!("No rulebreakers found for gameweek {}!", current_gameweek);
+        return;
+    }
+
+    for validation in violations {
         if validation.is_valid.not() {
             println!("{}\n\n", validation.reason)
         }
@@ -223,9 +240,13 @@ mod tests {
         let team = from_str(&VALID_TEAM_JSON).expect("Something went wrong parsing valid team");
         let mut validation_results: Vec<ValidationResult> = Vec::new();
 
-        validators::run_and_retain_violations(&clubs_by_club_id, &mut validation_results, &team);
+        let violations = validators::run_and_retain_violations(
+            &clubs_by_club_id,
+            &mut validation_results,
+            &team,
+        );
 
-        assert!(validation_results.is_empty())
+        assert!(violations.is_empty())
     }
 
     #[ignore]

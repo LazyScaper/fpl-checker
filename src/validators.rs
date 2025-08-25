@@ -98,7 +98,7 @@ pub fn run_and_retain_violations(
     clubs_by_club_id: &HashMap<i64, String>,
     validation_results: &mut Vec<ValidationResult>,
     team: &Team,
-) {
+) -> Vec<ValidationResult> {
     validation_results.push(team_contains_players_under_10_m(&team));
     validation_results.push(team_contains_players_from_newly_promoted_clubs(
         &clubs_by_club_id,
@@ -106,5 +106,7 @@ pub fn run_and_retain_violations(
     ));
     validation_results.push(team_contains_at_most_one_player_per_club(&team));
 
-    validation_results.retain(|result| !result.is_valid)
+    validation_results.retain(|result| !result.is_valid);
+
+    validation_results.clone()
 }

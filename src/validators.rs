@@ -35,20 +35,43 @@ pub fn team_contains_players_under_10_m(team: &Team) -> ValidationResult {
 }
 
 pub fn team_contains_at_most_one_player_per_club(team: &Team) -> ValidationResult {
-    let mut seen_players_by_club_id: HashMap<i64, Player> = HashMap::new();
+    let mut seen_players_by_club_name: IndexMap<String, Vec<Player>> = IndexMap::new();
 
     for player in &team.players {
-        if seen_players_by_club_id.contains_key(&player.club.id) {
-            return ValidationResult::invalid(&format!(
-                "{} has shat the bed. {} contains more than 1 player from {} ({} and {})",
-                &team.owner,
-                &team.name,
-                &player.club.name,
-                seen_players_by_club_id.get(&player.club.id).unwrap().name,
-                &player.name
-            ));
-        };
-        seen_players_by_club_id.insert(player.club.id, player.clone());
+        seen_players_by_club_name
+            .entry(player.club.name.clone())
+            .or_insert(Vec::new())
+            .push(player.clone());
+    }
+
+    seen_players_by_club_name.retain(|_, players| players.len() > 1);
+
+    let mut violation_string: String = format!(
+        "{} has shat the bed. {} contains",
+        team.owner.clone(),
+        team.name.clone()
+    );
+    for (club_name, players) in &seen_players_by_club_name {
+        violation_string.push_str(&format!(" more than 1 player from {} ", club_name));
+
+        for (index, player) in players.iter().enumerate() {
+            if index == 0 {
+                violation_string.push_str("(");
+            } else if index == players.len() - 1 {
+                violation_string.push_str(" and ");
+            } else {
+                violation_string.push_str(", ");
+            }
+            violation_string.push_str(&format!("{}", &player.name));
+
+            if index == players.len() - 1 {
+                violation_string.push_str(")");
+            }
+        }
+    }
+
+    if seen_players_by_club_name.len() > 0 {
+        return ValidationResult::invalid(&violation_string);
     }
 
     ValidationResult::valid()
@@ -71,7 +94,7 @@ pub fn team_contains_players_from_newly_promoted_clubs(
     ValidationResult::valid()
 }
 
-pub fn run_valiations(
+pub fn run_and_retain_violations(
     clubs_by_club_id: &HashMap<i64, String>,
     validation_results: &mut Vec<ValidationResult>,
     team: &Team,
@@ -82,4 +105,6 @@ pub fn run_valiations(
         &team,
     ));
     validation_results.push(team_contains_at_most_one_player_per_club(&team));
+
+    validation_results.retain(|result| !result.is_valid)
 }

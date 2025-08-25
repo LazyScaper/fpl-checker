@@ -19,7 +19,7 @@ fn main() {
     for fpl_team_id in PLAYER_AND_TEAM_IDS {
         let team = builders::fetch_and_build_team(fpl_team_id, &players_by_id);
 
-        validators::run_valiations(&clubs_by_club_id, &mut validation_results, &team);
+        validators::run_and_retain_violations(&clubs_by_club_id, &mut validation_results, &team);
     }
 
     for validation in validation_results {
@@ -48,6 +48,8 @@ mod tests {
     const INVALID_TEAM_JSON: &str = include_str!("../tests/samples/invalid_team.json");
     const INVALID_TEAM_DUPLICATE_ARSENAL_JSON: &str =
         include_str!("../tests/samples/invalid_team_duplicate_arsenal.json");
+    const INVALID_TEAM_MANY_PLAYERS_MANY_CLUBS_JSON: &str =
+        include_str!("../tests/samples/invalid_team_many_players_many_clubs.json");
     const INVALID_TEAM_MISSING_PLAYER_OVER_10M: &str =
         include_str!("../tests/samples/invalid_team_missing_player_over_10m.json");
     const INVALID_TEAM_MISSING_BURNLEY: &str =
@@ -111,7 +113,19 @@ mod tests {
             .expect("Something went wrong parsing invalid team");
         let actual = team_contains_at_most_one_player_per_club(&team);
         let expected = ValidationResult::invalid(
-            "Jake has shat the bed. Pedro Cask Ale contains more than 1 player from Arsenal (Gabriel and Saliba)",
+            "Jake has shat the bed. Pedro Cask Ale contains more than 1 player from Arsenal (Gabriel and Gyökeres)",
+        );
+
+        assert_eq!(actual, expected)
+    }
+
+    #[test]
+    fn should_fail_if_team_has_more_than_a_few_players_from_multiple_clubs() {
+        let team = from_str(&INVALID_TEAM_MANY_PLAYERS_MANY_CLUBS_JSON)
+            .expect("Something went wrong parsing invalid team");
+        let actual = team_contains_at_most_one_player_per_club(&team);
+        let expected = ValidationResult::invalid(
+            "Jake has shat the bed. Pedro Cask Ale contains more than 1 player from Chelsea (Sánchez and João Pedro) more than 1 player from Arsenal (Gabriel, Saliba and Gyökeres) more than 1 player from Man Utd (Yoro and Mbeumo)",
         );
 
         assert_eq!(actual, expected)
@@ -186,6 +200,19 @@ mod tests {
         let expected = ValidationResult::valid();
 
         assert_eq!(actual, expected)
+    }
+
+    #[test]
+    fn should_pass_all_validation_rules_if_valid() {
+        let bootstrap_data: BootstrapData =
+            from_str(&BOOTSTRAP_JSON).expect("Something went wrong parsing bootstrap data");
+        let clubs_by_club_id = build_clubs_by_id(&bootstrap_data);
+        let team = from_str(&VALID_TEAM_JSON).expect("Something went wrong parsing valid team");
+        let mut validation_results: Vec<ValidationResult> = Vec::new();
+
+        validators::run_and_retain_violations(&clubs_by_club_id, &mut validation_results, &team);
+
+        assert!(validation_results.is_empty())
     }
 
     #[ignore]

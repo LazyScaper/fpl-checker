@@ -13,21 +13,12 @@
   },
   "players": [
     {
-      "id": 287,
-      "name": "Pickford",
-      "price_in_millions": 5.5,
+      "id": 220,
+      "name": "Sánchez",
+      "price_in_millions": 5.0,
       "club": {
-        "id": 9,
-        "name": "Everton"
-      }
-    },
-    {
-      "id": 145,
-      "name": "De Cuyper",
-      "price_in_millions": 4.5,
-      "club": {
-        "id": 6,
-        "name": "Brighton"
+        "id": 7,
+        "name": "Chelsea"
       }
     },
     {
@@ -40,12 +31,21 @@
       }
     },
     {
-      "id": 348,
-      "name": "Rodon",
-      "price_in_millions": 4.0,
+      "id": 444,
+      "name": "Yoro",
+      "price_in_millions": 4.5,
       "club": {
-        "id": 11,
-        "name": "Leeds"
+        "id": 14,
+        "name": "Man Utd"
+      }
+    },
+    {
+      "id": 6,
+      "name": "Saliba",
+      "price_in_millions": 6.0,
+      "club": {
+        "id": 1,
+        "name": "Arsenal"
       }
     },
     {

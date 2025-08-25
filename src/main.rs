@@ -1,4 +1,4 @@
-use constants::{BOOTSTRAP_DATA_URI, PLAYER_AND_TEAM_IDS};
+use constants::BOOTSTRAP_DATA_URI;
 use models::{BootstrapData, ValidationResult};
 use std::ops::Not;
 
@@ -9,6 +9,19 @@ mod models;
 mod validators;
 
 fn main() {
+    if std::env::args().len() < 2 {
+        println!("Usage: fpl-checker <team_id> [<team_id> ...]");
+        return;
+    }
+
+    let team_ids: Vec<i64> = std::env::args()
+        .skip(1)
+        .map(|arg| {
+            arg.parse::<i64>()
+                .expect(&format!("Invalid team ID: {}", arg))
+        })
+        .collect();
+
     let bootstrap_data: BootstrapData = api::fetch_data_as_json(BOOTSTRAP_DATA_URI)
         .expect("Something went wrong fetching bootstrap data");
     let clubs_by_club_id = builders::build_clubs_by_id(&bootstrap_data);
@@ -16,7 +29,7 @@ fn main() {
 
     let mut validation_results: Vec<ValidationResult> = Vec::new();
 
-    for fpl_team_id in PLAYER_AND_TEAM_IDS {
+    for fpl_team_id in team_ids {
         let team = builders::fetch_and_build_team(fpl_team_id, &players_by_id);
 
         validators::run_and_retain_violations(&clubs_by_club_id, &mut validation_results, &team);

@@ -1,4 +1,3 @@
-use crate::models::Team;
 use constants::{BOOTSTRAP_DATA_URI, PLAYER_AND_TEAM_IDS};
 use models::{BootstrapData, ValidationResult};
 use std::ops::Not;

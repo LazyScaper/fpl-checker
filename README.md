@@ -26,11 +26,6 @@ The binary will be available at `target/release/fpl-validator` (or your project 
 
 ## Usage
 
-### Validate Hardcoded Teams
-```bash
-cargo run
-```
-
 ### Validate Specific Teams
 ```bash
 # Validate multiple teams

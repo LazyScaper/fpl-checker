@@ -9,7 +9,7 @@ where
 }
 
 pub fn fetch_picks(team_id: &i64, gameweek_data: &GameweekData) -> PicksData {
-    let picks_data: PicksData = crate::api::fetch_data_as_json(&format!(
+    let picks_data: PicksData = fetch_data_as_json(&format!(
         "https://fantasy.premierleague.com/api/entry/{}/event/{}/picks/",
         team_id, gameweek_data.current_event
     ))
@@ -18,7 +18,7 @@ pub fn fetch_picks(team_id: &i64, gameweek_data: &GameweekData) -> PicksData {
 }
 
 pub fn fetch_gameweek_data(team_id: &i64) -> GameweekData {
-    let gameweek_data: GameweekData = crate::api::fetch_data_as_json(&format!(
+    let gameweek_data: GameweekData = fetch_data_as_json(&format!(
         "https://fantasy.premierleague.com/api/entry/{}/",
         team_id
     ))

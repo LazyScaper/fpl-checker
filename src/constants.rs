@@ -7,6 +7,6 @@ pub const VIOLATION_PREFIXS: [&str; 7] = [
     "Oh dear, oh dear!",
     "Nice one,",
     "Are you trying to lose?",
-    "Just give up",
+    "Just give up,",
     "😂😂😂",
 ];

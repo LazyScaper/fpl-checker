@@ -21,24 +21,19 @@ fn main() {
     if arguments[1] == "--api" {
         // TODO: Start a server
     } else {
-        cli_main()
+        let team_ids: Vec<i64> = std::env::args()
+            .skip(1)
+            .map(|arg| {
+                arg.parse::<i64>()
+                    .expect(&format!("Invalid team ID: {}", arg))
+            })
+            .collect();
+
+        cli_main(team_ids);
     }
 }
 
-fn print_usage() {
-    println!("Usage: fpl-checker <team_id> [<team_id> ...]");
-    println!("       fpl-checker --api");
-}
-
-fn cli_main() {
-    let team_ids: Vec<i64> = std::env::args()
-        .skip(1)
-        .map(|arg| {
-            arg.parse::<i64>()
-                .expect(&format!("Invalid team ID: {}", arg))
-        })
-        .collect();
-
+fn cli_main(team_ids: Vec<i64>) {
     let bootstrap_data: BootstrapData = api::fetch_data_as_json(BOOTSTRAP_DATA_URI)
         .expect("Something went wrong fetching bootstrap data");
     let clubs_by_club_id = builders::build_clubs_by_id(&bootstrap_data);
@@ -75,6 +70,11 @@ fn cli_main() {
             println!("{}\n\n", validation.reason)
         }
     }
+}
+
+fn print_usage() {
+    println!("Usage: fpl-checker <team_id> [<team_id> ...]");
+    println!("       fpl-checker --api");
 }
 
 #[cfg(test)]

@@ -11,11 +11,26 @@ mod models;
 mod validators;
 
 fn main() {
-    if std::env::args().len() < 2 {
-        println!("Usage: fpl-checker <team_id> [<team_id> ...]");
+    let arguments: Vec<String> = std::env::args().collect();
+
+    if arguments.len() < 2 {
+        print_usage();
         return;
     }
 
+    if arguments[1] == "--api" {
+        // TODO: Start a server
+    } else {
+        cli_main()
+    }
+}
+
+fn print_usage() {
+    println!("Usage: fpl-checker <team_id> [<team_id> ...]");
+    println!("       fpl-checker --api");
+}
+
+fn cli_main() {
     let team_ids: Vec<i64> = std::env::args()
         .skip(1)
         .map(|arg| {

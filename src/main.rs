@@ -110,10 +110,14 @@ mod tests {
             from_str(&BOOTSTRAP_JSON).expect("Something went wrong parsing bootstrap data");
         let actual = build_clubs_by_id(&bootstrap_data);
 
-        assert_that!(Some(&"Arsenal".to_string())).is_equal_to(actual.get(&1));
-        assert_that!(Some(&"Burnley".to_string())).is_equal_to(actual.get(&3));
-        assert_that!(Some(&"Brighton".to_string())).is_equal_to(actual.get(&6));
-        assert_that!(Some(&"Man City".to_string())).is_equal_to(actual.get(&13));
+        assert_that!(&"Arsenal".to_string())
+            .is_equal_to(&actual.get(&1).expect("Club not found").name);
+        assert_that!(&"Burnley".to_string())
+            .is_equal_to(&actual.get(&3).expect("Club not found").name);
+        assert_that!(&"Brighton".to_string())
+            .is_equal_to(&actual.get(&6).expect("Club not found").name);
+        assert_that!(&"Man City".to_string())
+            .is_equal_to(&actual.get(&13).expect("Club not found").name);
     }
 
     #[test]

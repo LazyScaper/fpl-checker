@@ -1,5 +1,5 @@
 use crate::constants::{NEWLY_PROMOTED_CLUBS, VIOLATION_PREFIXS};
-use crate::models::{Player, Team, ValidationResult};
+use crate::models::{Club, Player, Team, ValidationResult};
 use indexmap::IndexMap;
 use rand::prelude::IndexedRandom;
 use std::collections::HashMap;
@@ -82,7 +82,7 @@ pub fn team_contains_at_most_one_player_per_club(team: &Team) -> ValidationResul
 }
 
 pub fn team_contains_players_from_newly_promoted_clubs(
-    clubs_by_club_id: &HashMap<i64, String>,
+    clubs_by_club_id: &HashMap<i64, Club>,
     team: &Team,
 ) -> ValidationResult {
     for club_id in NEWLY_PROMOTED_CLUBS {
@@ -91,7 +91,7 @@ pub fn team_contains_players_from_newly_promoted_clubs(
                 "{} {} has not included players from {}",
                 VIOLATION_PREFIXS.choose(&mut rand::rng()).unwrap(),
                 team.owner,
-                clubs_by_club_id.get(&club_id).unwrap()
+                clubs_by_club_id.get(&club_id).unwrap().name
             ));
         }
     }
@@ -100,7 +100,7 @@ pub fn team_contains_players_from_newly_promoted_clubs(
 }
 
 pub fn run_validators_and_retain_violations(
-    clubs_by_club_id: &HashMap<i64, String>,
+    clubs_by_club_id: &HashMap<i64, Club>,
     validation_results: &mut Vec<ValidationResult>,
     team: &Team,
 ) -> Vec<ValidationResult> {

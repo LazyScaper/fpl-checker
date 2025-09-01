@@ -1,4 +1,4 @@
-use crate::constants::{NEWLY_PROMOTED_CLUBS, VIOLATION_PREFIXS};
+use crate::constants::{NEWLY_PROMOTED_CLUBS, VIOLATION_PREFIXES};
 use crate::models::{Club, Player, Team, ValidationResult};
 use indexmap::IndexMap;
 use rand::prelude::IndexedRandom;
@@ -15,7 +15,7 @@ pub fn team_contains_players_under_10_m(team: &Team) -> ValidationResult {
 
     let mut violation_string: String = format!(
         "{} {} has gone overbudget with ",
-        VIOLATION_PREFIXS.choose(&mut rand::rng()).unwrap(),
+        VIOLATION_PREFIXES.choose(&mut rand::rng()).unwrap(),
         team.owner.clone()
     );
 
@@ -50,7 +50,7 @@ pub fn team_contains_at_most_one_player_per_club(team: &Team) -> ValidationResul
 
     let mut violation_string: String = format!(
         "{} {} has",
-        VIOLATION_PREFIXS
+        VIOLATION_PREFIXES
             .choose(&mut rand::rng())
             .expect("Something went wrong grabbing a prefix"),
         team.owner.clone(),
@@ -89,7 +89,7 @@ pub fn team_contains_players_from_newly_promoted_clubs(
         if !team.players.iter().any(|player| player.club.id == club_id) {
             return ValidationResult::invalid(&format!(
                 "{} {} has not included players from {}",
-                VIOLATION_PREFIXS.choose(&mut rand::rng()).unwrap(),
+                VIOLATION_PREFIXES.choose(&mut rand::rng()).unwrap(),
                 team.owner,
                 clubs_by_club_id.get(&club_id).unwrap().name
             ));

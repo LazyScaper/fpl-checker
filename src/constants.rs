@@ -1,6 +1,6 @@
 pub const NEWLY_PROMOTED_CLUBS: [i64; 3] = [3, 11, 17];
 pub const BOOTSTRAP_DATA_URI: &str = "https://fantasy.premierleague.com/api/bootstrap-static/";
-pub const VIOLATION_PREFIXS: [&str; 7] = [
+pub const VIOLATION_PREFIXES: [&str; 25] = [
     "Yikes!",
     "Womp womp,",
     "Oh dear, oh dear!",
@@ -8,4 +8,22 @@ pub const VIOLATION_PREFIXS: [&str; 7] = [
     "Are you trying to lose?",
     "Just give up,",
     "😂😂😂",
+    "Seriously?",
+    "Big oof,",
+    "That's embarrassing,",
+    "What were you thinking?",
+    "Rookie mistake,",
+    "Absolute shambles,",
+    "Dear me,",
+    "Blimey,",
+    "Crikey,",
+    "Not your finest moment,",
+    "Schoolboy error,",
+    "Tragic scenes,",
+    "You muppet,",
+    "Disaster class,",
+    "Peak banter,",
+    "Mental gymnastics,",
+    "Chef's kiss of failure,",
+    "Outstanding incompetence,",
 ];

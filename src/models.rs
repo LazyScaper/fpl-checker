@@ -7,6 +7,12 @@ pub struct BootstrapTeam {
 }
 
 #[derive(Deserialize)]
+pub struct BootstrapEvent {
+    pub id: i64,
+    pub is_current: bool,
+}
+
+#[derive(Deserialize)]
 pub struct BootstrapElement {
     pub id: i64,
     pub web_name: String,
@@ -17,6 +23,7 @@ pub struct BootstrapElement {
 #[derive(Deserialize)]
 pub struct BootstrapData {
     pub elements: Vec<BootstrapElement>,
+    pub events: Vec<BootstrapEvent>,
     pub teams: Vec<BootstrapTeam>,
 }
 

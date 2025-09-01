@@ -27,13 +27,14 @@ async fn main() {
         let team_ids: Vec<i64> = parse_team_ids_from_cli();
         let violations = run_validation_for_teams(team_ids);
 
-        print_validation_results(violations)
+        println!("{}", proccess_validation_results(violations));
     }
 }
 
 #[post("/api", data = "<input>")]
 fn handle_teams_request(input: Json<TeamsRequest>) -> String {
-    format!("{:?}", run_validation_for_teams(input.teams.clone()))
+    let violations = run_validation_for_teams(input.teams.clone());
+    proccess_validation_results(violations)
 }
 
 fn build_rocket() -> Rocket<Build> {
@@ -67,17 +68,19 @@ fn run_validation_for_teams(team_ids: Vec<i64>) -> Vec<ValidationResult> {
     violations
 }
 
-fn print_validation_results(violations: Vec<ValidationResult>) {
+fn proccess_validation_results(violations: Vec<ValidationResult>) -> String {
     if violations.is_empty() {
-        println!("No rules have been broken... boring!");
-        return;
+        return "No rules have been broken... boring!".to_string();
     }
 
+    let mut output = String::new();
     for validation in violations {
         if !validation.is_valid {
-            println!("{}\n\n", validation.reason)
+            output.push_str(&format!("{}", validation.reason + "\n\n"))
         }
     }
+
+    output
 }
 
 fn parse_team_ids_from_cli() -> Vec<i64> {

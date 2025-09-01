@@ -26,7 +26,7 @@ The binary will be available at `target/release/fpl-validator` (or your project 
 
 ## Usage
 
-### Validate Specific Teams
+### CLI Mode - Validate Specific Teams
 ```bash
 # Validate multiple teams
 cargo run 396409 2239760 2186577 258293 761504 7718758 2242306 8828197
@@ -35,10 +35,33 @@ cargo run 396409 2239760 2186577 258293 761504 7718758 2242306 8828197
 cargo run 396409
 ```
 
+### API Mode - Run as Web Server
+```bash
+# Start the web server
+cargo run -- --api
+
+# The server will start on the default Rocket port (usually 8000)
+# Access the endpoint at: http://localhost:8000
+```
+
+#### Making API Requests
+```bash
+# Validate teams via POST request
+curl -X POST http://localhost:8000/api \
+  -H "Content-Type: application/json" \
+  -d '{"teams": [396409, 2239760, 258293]}'
+```
+
 ### Using the Binary
 ```bash
-# After building with --release
+# Build the release binary
+cargo build --release
+
+# Run in CLI mode
 ./target/release/fpl-validator 396409 2239760 258293
+
+# Run in API mode
+./target/release/fpl-validator --api
 ```
 
 ## How It Works

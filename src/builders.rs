@@ -81,3 +81,13 @@ pub fn build_players_by_id(
 
     players_by_id
 }
+
+pub fn get_current_gameweek(bootstrap_data: &BootstrapData) -> i64 {
+    for event in &bootstrap_data.events {
+        if event.is_current {
+            return event.id;
+        }
+    }
+
+    panic!("Cannot determine current gameweek");
+}

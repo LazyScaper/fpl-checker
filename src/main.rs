@@ -21,25 +21,22 @@ fn main() {
     if arguments[1] == "--api" {
         // TODO: Start a server
     } else {
-        let team_ids: Vec<i64> = std::env::args()
-            .skip(1)
-            .map(|arg| {
-                arg.parse::<i64>()
-                    .unwrap_or_else(|_| panic!("Invalid team ID: {}", arg))
-            })
-            .collect();
+        let team_ids: Vec<i64> = parse_team_ids_from_cli();
+        let violations = cli_main(team_ids);
 
-        cli_main(team_ids);
+        print_validation_results(violations)
     }
 }
 
-fn cli_main(team_ids: Vec<i64>) {
+fn cli_main(team_ids: Vec<i64>) -> Vec<ValidationResult> {
     let bootstrap_data: BootstrapData = api::fetch_data_as_json(BOOTSTRAP_DATA_URI)
         .expect("Something went wrong fetching bootstrap data");
     let clubs_by_club_id = builders::build_clubs_by_id(&bootstrap_data);
     let players_by_id = builders::build_players_by_id(&clubs_by_club_id, &bootstrap_data);
-
     let current_gameweek = builders::get_current_gameweek(&bootstrap_data);
+
+    println!("Checking gameweek {}...", current_gameweek);
+
     let mut validation_results: Vec<ValidationResult> = Vec::new();
     let mut violations: Vec<ValidationResult> = Vec::new();
 
@@ -55,11 +52,12 @@ fn cli_main(team_ids: Vec<i64>) {
         ));
     }
 
+    violations
+}
+
+fn print_validation_results(violations: Vec<ValidationResult>) {
     if violations.is_empty() {
-        println!(
-            "No rules have been broken for gameweek {}!",
-            current_gameweek
-        );
+        println!("No rules have been broken... boring!");
         return;
     }
 
@@ -68,6 +66,16 @@ fn cli_main(team_ids: Vec<i64>) {
             println!("{}\n\n", validation.reason)
         }
     }
+}
+
+fn parse_team_ids_from_cli() -> Vec<i64> {
+    std::env::args()
+        .skip(1)
+        .map(|arg| {
+            arg.parse::<i64>()
+                .unwrap_or_else(|_| panic!("Invalid team ID: {}", arg))
+        })
+        .collect()
 }
 
 fn print_usage() {

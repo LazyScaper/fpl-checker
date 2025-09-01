@@ -89,3 +89,9 @@ pub struct Team {
     pub captain: Player,
     pub players: Vec<Player>,
 }
+
+#[derive(Deserialize, Debug)]
+#[serde(crate = "rocket::serde")]
+pub struct TeamsRequest {
+    pub teams: Vec<i64>,
+}

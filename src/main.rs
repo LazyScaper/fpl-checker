@@ -1,8 +1,10 @@
 use crate::api::{fetch_gameweek_data, fetch_picks};
 use crate::builders::build_team_from_data;
+use crate::models::TeamsRequest;
 use constants::BOOTSTRAP_DATA_URI;
 use models::{BootstrapData, ValidationResult};
-use std::ops::Not;
+use rocket::serde::json::Json;
+use rocket::{build, post, routes, Build, Rocket};
 
 mod api;
 mod builders;
@@ -10,7 +12,8 @@ mod constants;
 mod models;
 mod validators;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let arguments: Vec<String> = std::env::args().collect();
 
     if arguments.len() < 2 {
@@ -19,16 +22,25 @@ fn main() {
     }
 
     if arguments[1] == "--api" {
-        // TODO: Start a server
+        let _ = build_rocket().launch().await;
     } else {
         let team_ids: Vec<i64> = parse_team_ids_from_cli();
-        let violations = cli_main(team_ids);
+        let violations = run_validation_for_teams(team_ids);
 
         print_validation_results(violations)
     }
 }
 
-fn cli_main(team_ids: Vec<i64>) -> Vec<ValidationResult> {
+#[post("/api", data = "<input>")]
+fn handle_teams_request(input: Json<TeamsRequest>) -> String {
+    format!("{:?}", run_validation_for_teams(input.teams.clone()))
+}
+
+fn build_rocket() -> Rocket<Build> {
+    build().mount("/", routes![handle_teams_request])
+}
+
+fn run_validation_for_teams(team_ids: Vec<i64>) -> Vec<ValidationResult> {
     let bootstrap_data: BootstrapData = api::fetch_data_as_json(BOOTSTRAP_DATA_URI)
         .expect("Something went wrong fetching bootstrap data");
     let clubs_by_club_id = builders::build_clubs_by_id(&bootstrap_data);
@@ -62,7 +74,7 @@ fn print_validation_results(violations: Vec<ValidationResult>) {
     }
 
     for validation in violations {
-        if validation.is_valid.not() {
+        if !validation.is_valid {
             println!("{}\n\n", validation.reason)
         }
     }

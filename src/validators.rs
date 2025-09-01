@@ -29,7 +29,7 @@ pub fn team_contains_players_under_10_m(team: &Team) -> ValidationResult {
         violation_string.push_str(&format!("{} ({}m)", &player_name, price));
     }
 
-    if players_above_price_threshold.len() > 0 {
+    if !players_above_price_threshold.is_empty() {
         return ValidationResult::invalid(&violation_string);
     }
 
@@ -42,7 +42,7 @@ pub fn team_contains_at_most_one_player_per_club(team: &Team) -> ValidationResul
     for player in &team.players {
         seen_players_by_club_name
             .entry(player.club.name.clone())
-            .or_insert(Vec::new())
+            .or_default()
             .push(player.clone());
     }
 
@@ -60,21 +60,21 @@ pub fn team_contains_at_most_one_player_per_club(team: &Team) -> ValidationResul
 
         for (index, player) in players.iter().enumerate() {
             if index == 0 {
-                violation_string.push_str("(");
+                violation_string.push('(');
             } else if index == players.len() - 1 {
                 violation_string.push_str(" and ");
             } else {
                 violation_string.push_str(", ");
             }
-            violation_string.push_str(&format!("{}", &player.name));
+            violation_string.push_str(&player.name);
 
             if index == players.len() - 1 {
-                violation_string.push_str(")");
+                violation_string.push(')');
             }
         }
     }
 
-    if seen_players_by_club_name.len() > 0 {
+    if !seen_players_by_club_name.is_empty() {
         return ValidationResult::invalid(&violation_string);
     }
 
@@ -104,12 +104,12 @@ pub fn run_validators_and_retain_violations(
     validation_results: &mut Vec<ValidationResult>,
     team: &Team,
 ) -> Vec<ValidationResult> {
-    validation_results.push(team_contains_players_under_10_m(&team));
+    validation_results.push(team_contains_players_under_10_m(team));
     validation_results.push(team_contains_players_from_newly_promoted_clubs(
-        &clubs_by_club_id,
-        &team,
+        clubs_by_club_id,
+        team,
     ));
-    validation_results.push(team_contains_at_most_one_player_per_club(&team));
+    validation_results.push(team_contains_at_most_one_player_per_club(team));
 
     validation_results.retain(|result| !result.is_valid);
 

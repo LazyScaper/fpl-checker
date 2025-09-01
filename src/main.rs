@@ -25,7 +25,7 @@ fn main() {
             .skip(1)
             .map(|arg| {
                 arg.parse::<i64>()
-                    .expect(&format!("Invalid team ID: {}", arg))
+                    .unwrap_or_else(|_| panic!("Invalid team ID: {}", arg))
             })
             .collect();
 

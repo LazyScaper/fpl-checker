@@ -67,7 +67,7 @@ pub fn build_players_by_id(
             price_in_millions: element.now_cost / 10.0,
             club: Club {
                 id: element.team,
-                name: match { clubs_by_club_id.get(&element.team) } {
+                name: match clubs_by_club_id.get(&element.team) {
                     Some(team_name) => team_name.name.clone(),
                     _ => {
                         panic!("Could not find a team")

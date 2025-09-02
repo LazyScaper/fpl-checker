@@ -45,7 +45,7 @@ pub struct GameweekData {
     pub player_first_name: String,
 }
 
-#[derive(Debug, PartialEq, Clone, Default)]
+#[derive(Debug, PartialEq, Clone, Default, Serialize)]
 pub struct ValidationResult {
     pub is_valid: bool,
     pub reason: String,

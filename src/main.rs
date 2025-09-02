@@ -27,14 +27,14 @@ async fn main() {
         let team_ids: Vec<i64> = parse_team_ids_from_cli();
         let violations = run_validation_for_teams(team_ids);
 
-        println!("{}", proccess_validation_results(violations));
+        println!("{}", process_validation_results(violations));
     }
 }
 
 #[post("/api", data = "<input>")]
-fn handle_teams_request(input: Json<TeamsRequest>) -> String {
+fn handle_teams_request(input: Json<TeamsRequest>) -> Json<String> {
     let violations = run_validation_for_teams(input.teams.clone());
-    proccess_validation_results(violations)
+    Json(process_validation_results(violations))
 }
 
 fn build_rocket() -> Rocket<Build> {
@@ -68,7 +68,7 @@ fn run_validation_for_teams(team_ids: Vec<i64>) -> Vec<ValidationResult> {
     violations
 }
 
-fn proccess_validation_results(violations: Vec<ValidationResult>) -> String {
+fn process_validation_results(violations: Vec<ValidationResult>) -> String {
     if violations.is_empty() {
         return "No rules have been broken... boring!".to_string();
     }

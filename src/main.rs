@@ -76,7 +76,7 @@ fn process_validation_results(violations: Vec<ValidationResult>) -> String {
     let mut output = String::new();
     for validation in violations {
         if !validation.is_valid {
-            output.push_str(&format!("{}", validation.reason + "\n\n"))
+            output.push_str(&(validation.reason + "\n\n").to_string())
         }
     }
 

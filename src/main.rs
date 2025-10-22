@@ -58,11 +58,11 @@ fn run_validation_for_teams(team_ids: Vec<i64>) -> Vec<ValidationResult> {
         let picks_data = fetch_picks(&fpl_team_id, &gameweek_data);
         let team = build_team_from_data(fpl_team_id, &players_by_id, &gameweek_data, &picks_data);
 
-        violations.extend(validators::run_validators_and_retain_violations(
+        violations = validators::run_validators_and_retain_violations(
             &clubs_by_club_id,
             &mut validation_results,
             &team,
-        ));
+        );
     }
 
     violations

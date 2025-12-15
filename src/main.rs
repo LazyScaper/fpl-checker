@@ -25,23 +25,24 @@ async fn main() {
         let _ = build_rocket().launch().await;
     } else {
         let team_ids: Vec<i64> = parse_team_ids_from_cli();
-        let violations = run_validation_for_teams(team_ids);
+        let violations = run_validation_for_teams(team_ids, "CLI");
 
         println!("{}", process_validation_results(violations));
     }
 }
 
 #[post("/api", data = "<input>")]
-fn handle_teams_request(input: Json<TeamsRequest>) -> Json<String> {
-    let violations = run_validation_for_teams(input.teams.clone());
-    Json(process_validation_results(violations))
+fn handle_teams_request(input: Json<TeamsRequest>) -> Json<Vec<ValidationResult>> {
+    let violations = run_validation_for_teams(input.teams.clone(), "API");
+    Json(violations)
 }
 
 fn build_rocket() -> Rocket<Build> {
     build().mount("/", routes![handle_teams_request])
 }
 
-fn run_validation_for_teams(team_ids: Vec<i64>) -> Vec<ValidationResult> {
+fn run_validation_for_teams(team_ids: Vec<i64>, source: &str) -> Vec<ValidationResult> {
+    println!("Checking teams {:?} from {}", team_ids, source);
     let bootstrap_data: BootstrapData = api::fetch_data_as_json(BOOTSTRAP_DATA_URI)
         .expect("Something went wrong fetching bootstrap data");
     let clubs_by_club_id = builders::build_clubs_by_id(&bootstrap_data);
